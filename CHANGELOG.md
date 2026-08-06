@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.5-beta
+- Ativação do modo JSON nativo da Groq com `response_format=json_object`.
+- Resposta padronizada no formato `{ "questions": [...] }`.
+- Validação explícita de conteúdo vazio, resposta truncada e `finish_reason=length`.
+- Nova tentativa automática com lote e contexto menores quando o JSON vier inválido ou incompleto.
+- Compatibilidade mantida com respostas antigas em formato de array.
+- Uso de raciocínio oculto e esforço baixo para reduzir consumo de tokens na geração estruturada.
+
 ## 1.1.4-beta
 - Seleção automática de trechos relevantes do conteúdo programático do edital.
 - Contexto enviado à Groq limitado a 7.000 caracteres.
