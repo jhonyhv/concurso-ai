@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# SQLite
+*.db
+
+# Environment
+.env
+
+# VS Code
+.vscode/
+
+# Streamlit
+.streamlit/
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
