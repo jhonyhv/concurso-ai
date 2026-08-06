@@ -7,6 +7,7 @@ import streamlit as st
 from database.database import get_settings
 from services.reviews import get_due_count
 from utils.helpers import format_date_pt
+from utils.version import get_version_badge
 
 
 def _greeting() -> tuple[str, str]:
@@ -23,6 +24,7 @@ def render_header(page: str = "Dashboard") -> None:
     name = str(settings.get("user_name", "Jhony"))
     greeting, icon = _greeting()
     due = get_due_count()
+    version_badge = get_version_badge()
     badge = f'<span class="notify-badge">{min(due, 99)}</span>' if due else ""
     st.markdown(
         f"""
@@ -36,7 +38,7 @@ def render_header(page: str = "Dashboard") -> None:
             </div>
           </div>
           <div class="profile-area profile-v2">
-            <div class="status-chip"><span></span> v0.9</div>
+            <div class="status-chip"><span></span> {version_badge}</div>
             <div class="notification" title="{due} revisão(ões) para hoje">🔔{badge}</div>
             <div class="avatar avatar-photo">{name[:1].upper()}</div>
             <div class="profile-name">{name} ▾</div>
