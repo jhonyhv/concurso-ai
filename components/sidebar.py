@@ -48,7 +48,7 @@ def render_sidebar() -> str:
               <div class="upgrade-icon">👑</div>
               <strong>Plano de aprovação</strong>
               <p>{settings['user_name']}, mantenha suas metas, revisões e questões em dia.</p>
-              <div class="premium-pill">Versão 1.0 beta • Coleta automática</div>
+              <div class="premium-pill">Versão 1.1 beta • Revisão administrativa</div>
             </div>
             """,
             unsafe_allow_html=True,
