@@ -38,8 +38,8 @@ def _generation_documents(documents: list[ExtractedDocument]) -> list[ExtractedD
                 reason,
             )
 
-    # O edital fundamenta o conteúdo programático; as provas fornecem o padrão
-    # de cobrança da banca. Essa combinação reduz alucinações e duplicidades.
+    # O edital fundamenta o conteúdo programático; provas oficiais, quando
+    # disponíveis, complementam o padrão de cobrança da banca.
     notices = [document for document in eligible if document.kind == "notice"]
     exams = [document for document in eligible if document.kind == "exam"]
     selected = notices[:1] + exams[:2]
@@ -54,12 +54,19 @@ def _generation_documents(documents: list[ExtractedDocument]) -> list[ExtractedD
     return selected[:3]
 
 
-def collect_source(source: SourceConfig, storage: SupabaseStorage, max_questions_per_document: int = 5) -> dict[str, int]:
+def collect_source(
+    source: SourceConfig,
+    storage: SupabaseStorage,
+    max_questions_per_document: int = 5,
+) -> dict[str, int]:
     client = HttpClient()
     links = discover_documents(source, client)
     LOGGER.info("%s: %s link(s) oficial(is) descoberto(s)", source.source_id, len(links))
+    if not links:
+        raise RuntimeError(f"{source.source_id}: nenhuma fonte oficial foi descoberta")
 
     documents: list[ExtractedDocument] = []
+    extraction_errors: list[str] = []
     for link in links:
         try:
             document = extract_document(link, client)
@@ -72,7 +79,12 @@ def collect_source(source: SourceConfig, storage: SupabaseStorage, max_questions
             if document.text:
                 documents.append(document)
         except Exception as exc:
+            extraction_errors.append(f"{link.url}: {exc}")
             LOGGER.warning("Falha ao extrair %s: %s", link.url, exc)
+
+    if not documents:
+        detail = "; ".join(extraction_errors[:3]) or "nenhum documento retornou texto"
+        raise RuntimeError(f"{source.source_id}: nenhuma fonte pôde ser extraída ({detail})")
 
     storage.upsert_documents(documents)
     questions: list[CandidateQuestion] = []
@@ -83,23 +95,40 @@ def collect_source(source: SourceConfig, storage: SupabaseStorage, max_questions
     questions.extend(official_questions)
     LOGGER.info("Questões oficiais pareadas: %s", len(official_questions))
 
+    generated_count = 0
     if source.mode == "generate_original":
         generation_docs = _generation_documents(documents)
         LOGGER.info("Documentos de qualidade selecionados para a Groq: %s", len(generation_docs))
+        if not generation_docs and not official_questions:
+            raise RuntimeError(
+                f"{source.source_id}: nenhum edital, prova ou normativo passou no filtro de qualidade"
+            )
+
         for document in generation_docs:
             try:
-                generated = generate_original_questions(source, document, max_questions_per_document)
+                generated = generate_original_questions(
+                    source,
+                    document,
+                    max_questions_per_document,
+                )
+                generated_count += len(generated)
                 questions.extend(generated)
                 LOGGER.info("Questões inéditas aceitas para %s: %s", document.url, len(generated))
             except Exception as exc:
                 LOGGER.warning("Falha na geração para %s: %s", document.url, exc)
 
+        if generated_count == 0 and not official_questions:
+            raise RuntimeError(
+                f"{source.source_id}: fontes válidas foram extraídas, mas nenhuma questão foi gerada"
+            )
+
     unique = {question.source_uid: question for question in questions}
     saved = storage.upsert_questions(unique.values())
     LOGGER.info(
-        "%s concluído: documentos=%s questões_salvas=%s",
+        "%s concluído: documentos=%s questões_geradas=%s questões_novas=%s",
         source.source_id,
         len(documents),
+        len(unique),
         saved,
     )
     return {"documents": len(documents), "questions": saved}
@@ -107,14 +136,24 @@ def collect_source(source: SourceConfig, storage: SupabaseStorage, max_questions
 
 def run_collection() -> dict[str, dict[str, int]]:
     storage = SupabaseStorage()
+    sources = enabled_sources()
     results: dict[str, dict[str, int]] = {}
-    for source in enabled_sources():
+    failures: dict[str, str] = {}
+
+    for source in sources:
         try:
             result = collect_source(source, storage)
             storage.log_run(source.source_id, "success", result["documents"], result["questions"])
             results[source.source_id] = result
         except Exception as exc:
-            storage.log_run(source.source_id, "error", 0, 0, str(exc))
+            message = str(exc)
+            failures[source.source_id] = message
+            storage.log_run(source.source_id, "error", 0, 0, message)
             LOGGER.exception("Coleta falhou para %s", source.source_id)
             results[source.source_id] = {"documents": 0, "questions": 0}
+
+    if sources and len(failures) == len(sources):
+        summary = "; ".join(f"{source_id}: {message}" for source_id, message in failures.items())
+        raise RuntimeError(f"Todas as fontes habilitadas falharam: {summary}")
+
     return results
