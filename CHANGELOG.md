@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3-beta
+- Fonte principal alterada para a página oficial do concurso no Banco do Brasil.
+- Uso direto do PDF oficial do Edital nº 01 hospedado em `bb.com.br`.
+- Remoção da dependência da página da Cesgranrio, que retornava HTTP 403 no GitHub Actions.
+- O workflow agora falha quando nenhuma fonte é extraída ou nenhuma questão é gerada.
+- Logs distinguem questões geradas de questões realmente novas inseridas no catálogo.
+
 ## 1.1.2-beta
 - Fonte principal alterada para o índice oficial da Cesgranrio do Banco do Brasil 2022/001.
 - Descoberta do Edital nº 01, provas A/B/C e gabaritos oficiais de Agente Comercial.
