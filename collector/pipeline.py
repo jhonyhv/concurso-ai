@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+import logging
+
+from collector.ai_generator import generate_original_questions
+from collector.config import enabled_sources
+from collector.discovery import discover_documents
+from collector.http_client import HttpClient
+from collector.models import CandidateQuestion, ExtractedDocument, SourceConfig
+from collector.pdf_reader import extract_document
+from collector.question_parser import pair_official_questions
+from collector.storage import SupabaseStorage
+
+LOGGER = logging.getLogger("concursoai.collector")
+
+
+def collect_source(source: SourceConfig, storage: SupabaseStorage, max_questions_per_document: int = 5) -> dict[str, int]:
+    client = HttpClient()
+    links = discover_documents(source, client)
+    documents: list[ExtractedDocument] = []
+    for link in links:
+        try:
+            document = extract_document(link, client)
+            if document.text:
+                documents.append(document)
+        except Exception as exc:  # mantém a coleta dos demais documentos
+            LOGGER.warning("Falha ao extrair %s: %s", link.url, exc)
+
+    storage.upsert_documents(documents)
+    questions: list[CandidateQuestion] = []
+
+    exams = [doc for doc in documents if doc.kind == "exam" and doc.confidence >= 0.8]
+    answers = [doc for doc in documents if doc.kind == "answer" and doc.confidence >= 0.8]
+    questions.extend(pair_official_questions(source, exams, answers))
+
+    if source.mode == "generate_original":
+        generation_docs = sorted(documents, key=lambda doc: (doc.kind not in {"notice", "exam", "reference"}, -len(doc.text)))[:3]
+        for document in generation_docs:
+            try:
+                questions.extend(generate_original_questions(source, document, max_questions_per_document))
+            except Exception as exc:
+                LOGGER.warning("Falha na geração para %s: %s", document.url, exc)
+
+    unique = {question.source_uid: question for question in questions}
+    published = storage.upsert_questions(unique.values())
+    return {"documents": len(documents), "questions": published}
+
+
+def run_collection() -> dict[str, dict[str, int]]:
+    storage = SupabaseStorage()
+    results: dict[str, dict[str, int]] = {}
+    for source in enabled_sources():
+        try:
+            result = collect_source(source, storage)
+            storage.log_run(source.source_id, "success", result["documents"], result["questions"])
+            results[source.source_id] = result
+        except Exception as exc:
+            storage.log_run(source.source_id, "error", 0, 0, str(exc))
+            LOGGER.exception("Coleta falhou para %s", source.source_id)
+            results[source.source_id] = {"documents": 0, "questions": 0}
+    return results

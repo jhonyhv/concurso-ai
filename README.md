@@ -52,3 +52,13 @@ Na primeira execução, o sistema realiza a migração do SQLite automaticamente
 ## Publicação
 
 Consulte [`DEPLOY.md`](DEPLOY.md). Antes de publicar, considere que o SQLite pode não oferecer persistência permanente em hospedagens com disco temporário. Faça backups regulares pela tela **Configurações > Backup**.
+
+
+## Coletor automático (v1.0 beta)
+
+1. Execute `supabase/schema.sql` no SQL Editor do Supabase.
+2. Configure no Streamlit: `SUPABASE_URL` e `SUPABASE_ANON_KEY`.
+3. Configure nos Secrets do GitHub: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GROQ_API_KEY` e `GROQ_MODEL`.
+4. Execute o workflow **Coletar questões** ou aguarde a execução diária.
+
+O estudante não envia arquivos. O robô descobre documentos oficiais, extrai o conteúdo, gera questões inéditas, valida e publica no catálogo remoto.

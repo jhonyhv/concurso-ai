@@ -82,6 +82,17 @@ QUESTION_MIGRATIONS = {
     "tags": "TEXT",
     "favorite": "INTEGER NOT NULL DEFAULT 0",
     "created_at": "TEXT",
+    "organization": "TEXT",
+    "cargo": "TEXT",
+    "year": "INTEGER",
+    "source_url": "TEXT",
+    "source_kind": "TEXT",
+    "license_name": "TEXT",
+    "status": "TEXT NOT NULL DEFAULT 'published'",
+    "confidence": "REAL NOT NULL DEFAULT 1.0",
+    "source_uid": "TEXT",
+    "official_number": "INTEGER",
+    "imported_at": "TEXT",
 }
 
 ATTEMPT_MIGRATIONS = {
@@ -260,6 +271,13 @@ def init_db() -> None:
                 error_message TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS collector_sync_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                last_synced_at TEXT,
+                last_count INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT
+            );
             """
         )
 
@@ -279,6 +297,10 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_reviews_due ON reviews(due_date, status);
             CREATE INDEX IF NOT EXISTS idx_flashcards_due ON flashcards(due_date);
             CREATE INDEX IF NOT EXISTS idx_ai_usage_date ON ai_usage(created_at);
+            DROP INDEX IF EXISTS idx_questions_source_uid;
+            CREATE UNIQUE INDEX idx_questions_source_uid ON questions(source_uid);
+            CREATE INDEX IF NOT EXISTS idx_questions_source_kind ON questions(source_kind);
+            CREATE INDEX IF NOT EXISTS idx_questions_status ON questions(status);
             """
         )
 

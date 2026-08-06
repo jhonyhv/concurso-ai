@@ -9,7 +9,7 @@ SECTIONS = [
     ("ESTUDOS", [("Estudar", "📖"), ("Questões", "❓"), ("Simulados", "📝"), ("Flashcards", "🗂️")]),
     ("IA", [("Professor IA", "🤖")]),
     ("ANÁLISES", [("Estatísticas", "📊"), ("Desempenho", "📈"), ("Revisões", "🗓️")]),
-    ("OUTROS", [("Metas", "🎯"), ("Calendário", "📅"), ("Configurações", "⚙️")]),
+    ("OUTROS", [("Metas", "🎯"), ("Calendário", "📅"), ("Coletor automático", "🌐"), ("Configurações", "⚙️")]),
 ]
 
 
@@ -48,7 +48,7 @@ def render_sidebar() -> str:
               <div class="upgrade-icon">👑</div>
               <strong>Plano de aprovação</strong>
               <p>{settings['user_name']}, mantenha suas metas, revisões e questões em dia.</p>
-              <div class="premium-pill">Versão 0.9 • IA online</div>
+              <div class="premium-pill">Versão 1.0 beta • Coleta automática</div>
             </div>
             """,
             unsafe_allow_html=True,
