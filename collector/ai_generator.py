@@ -90,14 +90,20 @@ def _uid(source: SourceConfig, statement: str, options: dict[str, str]) -> str:
 
 
 def _extract_json(content: str) -> list[dict]:
-    content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip(), flags=re.I | re.S)
-    start, end = content.find("["), content.rfind("]")
-    if start < 0 or end < start:
-        raise ValueError("A IA não devolveu uma lista JSON válida.")
-    payload = json.loads(content[start : end + 1])
-    if not isinstance(payload, list):
-        raise ValueError("Resposta JSON inesperada.")
-    return payload
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip(), flags=re.I | re.S)
+    payload = json.loads(cleaned)
+
+    if isinstance(payload, dict):
+        questions = payload.get("questions")
+        if not isinstance(questions, list):
+            raise ValueError("O objeto JSON não contém a lista 'questions'.")
+        return questions
+
+    # Compatibilidade com respostas antigas em formato de array.
+    if isinstance(payload, list):
+        return payload
+
+    raise ValueError("Resposta JSON inesperada.")
 
 
 def _build_prompt(
@@ -121,11 +127,11 @@ Concurso: {source.contest}
 Banca/estilo: {source.bank}
 URL de origem: {document.url}
 
-Retorne SOMENTE um array JSON. Cada item deve possuir exatamente:
-subject, topic, subtopic, difficulty (Fácil|Média|Difícil), statement,
-options (objeto com A, B, C, D, E), answer (A-E), explanation, tags (array de textos), cargo, year.
+Retorne SOMENTE um objeto JSON válido no formato:
+{{"questions": [{{"subject": "...", "topic": "...", "subtopic": "...", "difficulty": "Fácil|Média|Difícil", "statement": "...", "options": {{"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."}}, "answer": "A-E", "explanation": "...", "tags": ["..."], "cargo": "Agente Comercial", "year": 2022}}]}}
+
 A explicação deve justificar a correta com base na fonte e apontar por que a principal alternativa-distratora está errada.
-Garanta apenas uma resposta correta e alternativas plausíveis.
+Garanta apenas uma resposta correta e cinco alternativas plausíveis.
 
 TRECHOS SELECIONADOS DA FONTE:
 {source_text}
@@ -146,15 +152,42 @@ def _request_groq(
             "messages": [
                 {
                     "role": "system",
-                    "content": "Você elabora questões de concursos usando somente a fonte fornecida e responde apenas JSON válido.",
+                    "content": (
+                        "Você elabora questões de concursos usando somente a fonte fornecida. "
+                        "Responda exclusivamente com um objeto JSON válido contendo a chave questions."
+                    ),
                 },
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.2,
             "max_completion_tokens": max_completion_tokens,
+            "response_format": {"type": "json_object"},
+            "reasoning_format": "hidden",
+            "reasoning_effort": "low",
         },
         timeout=90,
     )
+
+
+def _decode_response(response: requests.Response) -> tuple[list[dict], str]:
+    payload = response.json()
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise ValueError("A Groq não retornou escolhas.")
+
+    choice = choices[0]
+    finish_reason = str(choice.get("finish_reason") or "")
+    message = choice.get("message")
+    if not isinstance(message, dict):
+        raise ValueError("A Groq não retornou uma mensagem válida.")
+
+    content = str(message.get("content") or "").strip()
+    if not content:
+        raise ValueError("A Groq retornou conteúdo vazio.")
+    if finish_reason == "length":
+        raise ValueError("A resposta da Groq foi interrompida por limite de saída.")
+
+    return _extract_json(content), finish_reason
 
 
 def generate_original_questions(
@@ -176,49 +209,64 @@ def generate_original_questions(
 
     model = os.getenv("GROQ_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     requested_quantity = max(1, min(quantity, MAX_QUESTIONS_PER_REQUEST))
-    source_text = _source_excerpt(document.text, MAX_EXCERPT_CHARS)
-    prompt = _build_prompt(source, document, source_text, requested_quantity)
-
-    LOGGER.info(
-        "Enviando à Groq: questões=%s trecho=%s caracteres limite_saida=%s",
-        requested_quantity,
-        len(source_text),
-        MAX_COMPLETION_TOKENS,
+    attempts = (
+        (requested_quantity, MAX_EXCERPT_CHARS, MAX_COMPLETION_TOKENS),
+        (min(requested_quantity, RETRY_QUESTIONS), RETRY_EXCERPT_CHARS, RETRY_COMPLETION_TOKENS),
     )
 
     started = time.perf_counter()
-    response = _request_groq(
-        api_key,
-        model,
-        prompt,
-        MAX_COMPLETION_TOKENS,
-    )
+    data: list[dict] | None = None
+    last_error: Exception | None = None
 
-    if response.status_code == 413:
-        retry_quantity = min(requested_quantity, RETRY_QUESTIONS)
-        source_text = _source_excerpt(document.text, RETRY_EXCERPT_CHARS)
-        prompt = _build_prompt(source, document, source_text, retry_quantity)
-        LOGGER.warning(
-            "Groq recusou o tamanho inicial; repetindo com questões=%s trecho=%s caracteres limite_saida=%s",
-            retry_quantity,
+    for attempt_number, (attempt_quantity, excerpt_limit, output_limit) in enumerate(attempts, start=1):
+        source_text = _source_excerpt(document.text, excerpt_limit)
+        prompt = _build_prompt(source, document, source_text, attempt_quantity)
+        LOGGER.info(
+            "Enviando à Groq: tentativa=%s questões=%s trecho=%s caracteres limite_saida=%s modo=json_object",
+            attempt_number,
+            attempt_quantity,
             len(source_text),
-            RETRY_COMPLETION_TOKENS,
-        )
-        response = _request_groq(
-            api_key,
-            model,
-            prompt,
-            RETRY_COMPLETION_TOKENS,
+            output_limit,
         )
 
-    if not response.ok:
-        raise RuntimeError(f"Groq HTTP {response.status_code}: {response.text[:500]}")
+        response = _request_groq(api_key, model, prompt, output_limit)
+        if not response.ok:
+            last_error = RuntimeError(
+                f"Groq HTTP {response.status_code}: {response.text[:500]}"
+            )
+            retryable = response.status_code in {413, 429, 500, 502, 503, 504}
+            if retryable and attempt_number < len(attempts):
+                LOGGER.warning(
+                    "Groq recusou a tentativa %s; repetindo com contexto e saída menores.",
+                    attempt_number,
+                )
+                continue
+            raise last_error
 
-    payload = response.json()
-    content = str(payload["choices"][0]["message"]["content"])
-    data = _extract_json(content)
+        try:
+            data, finish_reason = _decode_response(response)
+            LOGGER.info(
+                "Resposta JSON válida recebida da Groq: tentativa=%s itens=%s finish_reason=%s",
+                attempt_number,
+                len(data),
+                finish_reason or "não informado",
+            )
+            break
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if attempt_number < len(attempts):
+                LOGGER.warning(
+                    "Resposta JSON inválida ou truncada na tentativa %s (%s); repetindo com lote menor.",
+                    attempt_number,
+                    exc,
+                )
+                continue
+            raise RuntimeError(f"A Groq não retornou JSON válido após nova tentativa: {exc}") from exc
+
+    if data is None:
+        raise RuntimeError(f"A Groq não retornou questões: {last_error}")
+
     candidates: list[CandidateQuestion] = []
-
     for item in data:
         if not isinstance(item, dict):
             continue
@@ -253,7 +301,8 @@ def generate_original_questions(
                 options=options,
                 answer=answer,
                 explanation=str(item.get("explanation") or ""),
-                tags=[str(tag) for tag in item.get("tags", [])][:12] + [source.source_id, "inédita_ia"],
+                tags=[str(tag) for tag in item.get("tags", [])][:12]
+                + [source.source_id, "inédita_ia"],
                 source_url=document.url,
                 source_kind="ai_original",
                 license_name=source.license_name,
