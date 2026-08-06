@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.4-beta
+- Seleção automática de trechos relevantes do conteúdo programático do edital.
+- Contexto enviado à Groq limitado a 7.000 caracteres.
+- Geração limitada a até três questões por requisição para respeitar o TPM disponível.
+- Limite de saída reduzido para 2.400 tokens.
+- Nova tentativa automática com contexto e saída menores quando a Groq responder HTTP 413.
+- Logs mostram quantidade de questões, tamanho do trecho e limite de saída enviados à IA.
+
 ## 1.1.3-beta
 - Fonte principal alterada para a página oficial do concurso no Banco do Brasil.
 - Uso direto do PDF oficial do Edital nº 01 hospedado em `bb.com.br`.
