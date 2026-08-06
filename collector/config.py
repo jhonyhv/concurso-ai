@@ -5,19 +5,26 @@ from collector.models import SourceConfig
 SOURCES: tuple[SourceConfig, ...] = (
     SourceConfig(
         source_id="bb_concurso",
-        name="Concurso Banco do Brasil",
+        name="Concurso Banco do Brasil 2022/001",
         organization="Banco do Brasil",
         bank="Cesgranrio",
-        contest="Banco do Brasil",
-        page_url="https://www.bb.com.br/site/concurso-bb/",
-        allowed_domains=("bb.com.br", "www.bb.com.br", "cesgranrio.org.br", "www.cesgranrio.org.br"),
+        contest="Seleção Externa Banco do Brasil 2022/001",
+        page_url="https://www.cesgranrio.org.br/concurso/banco-do-brasil-bb-01-2022/",
+        allowed_domains=(
+            "cesgranrio.org.br",
+            "www.cesgranrio.org.br",
+            "inscricao.cesgranrio.com.br",
+            "bb.com.br",
+            "www.bb.com.br",
+        ),
         mode="generate_original",
         license_name="fonte_oficial_sem_licenca_de_reproducao_confirmada",
-        max_documents=10,
+        max_documents=8,
         default_subject="Conhecimentos Bancários",
         style_notes=(
-            "Questões inéditas para Agente Comercial do Banco do Brasil, estilo Cesgranrio, "
-            "com enunciado contextualizado, cinco alternativas plausíveis e apenas uma correta."
+            "Questões inéditas para Escriturário - Agente Comercial do Banco do Brasil, "
+            "fundamentadas no conteúdo programático oficial e inspiradas no padrão Cesgranrio, "
+            "sem copiar enunciados das provas. Use cinco alternativas plausíveis e apenas uma correta."
         ),
     ),
     SourceConfig(
