@@ -10,18 +10,28 @@ from database.database import connect
 
 
 def _secret(name: str) -> str:
-    value = os.getenv(name, "")
+    value = os.getenv(name, "").strip()
     if value:
         return value
     try:
         import streamlit as st
-        return str(st.secrets.get(name, "") or "")
+
+        return str(st.secrets.get(name, "") or "").strip()
     except Exception:
         return ""
 
 
 def _config() -> tuple[str, str]:
     return _secret("SUPABASE_URL").rstrip("/"), _secret("SUPABASE_ANON_KEY")
+
+
+def _public_headers(key: str) -> dict[str, str]:
+    headers = {"apikey": key}
+    # A anon key legada é JWT. A nova sb_publishable_ é opaca e deve ser
+    # enviada somente em apikey.
+    if key and not key.startswith("sb_publishable_"):
+        headers["Authorization"] = f"Bearer {key}"
+    return headers
 
 
 def _should_sync(force: bool) -> bool:
@@ -47,7 +57,7 @@ def sync_remote_questions(force: bool = False) -> dict[str, object]:
 
     response = requests.get(
         f"{url}/rest/v1/questions_catalog",
-        headers={"apikey": key, "Authorization": f"Bearer {key}"},
+        headers=_public_headers(key),
         params={
             "select": "*",
             "status": "eq.published",
@@ -77,7 +87,11 @@ def sync_remote_questions(force: bool = False) -> dict[str, object]:
                 row.get("subtopic") or "",
                 row.get("difficulty") or "Média",
                 row.get("statement") or "",
-                options.get("A", ""), options.get("B", ""), options.get("C", ""), options.get("D", ""), options.get("E"),
+                options.get("A", ""),
+                options.get("B", ""),
+                options.get("C", ""),
+                options.get("D", ""),
+                options.get("E"),
                 row.get("answer") or "A",
                 row.get("explanation") or "",
                 tags,
