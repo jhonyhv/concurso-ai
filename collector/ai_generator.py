@@ -14,7 +14,7 @@ from collector.models import CandidateQuestion, ExtractedDocument, SourceConfig
 
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-oss-20b"
-MIN_SOURCE_CHARS = 250
+MIN_SOURCE_CHARS = 1200
 LOGGER = logging.getLogger("concursoai.collector.ai")
 
 
@@ -59,9 +59,14 @@ def generate_original_questions(
     model = os.getenv("GROQ_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     source_text = document.text[:14000]
     prompt = f"""
-Crie {quantity} questões INÉDITAS para uma plataforma de preparação para concursos.
-Não copie frases longas nem reproduza questões existentes. Use apenas os conceitos e o conteúdo programático
-identificáveis na fonte abaixo. {source.style_notes}
+Crie até {quantity} questões INÉDITAS para uma plataforma de preparação para concursos.
+Não copie frases longas nem reproduza questões existentes. Use somente informações presentes na fonte abaixo.
+{source.style_notes}
+
+Toda afirmação do enunciado, da resposta correta e da explicação deve ser verificável na fonte.
+Não acrescente produtos, tarifas, limites, valores, datas, percentuais, benefícios ou regras ausentes.
+Quando a fonte for apenas administrativa, institucional, de convocação ou insuficiente, retorne somente [].
+Produza menos questões quando o conteúdo sustentar poucos itens confiáveis.
 
 Fonte oficial: {document.title}
 Órgão: {source.organization}
@@ -72,7 +77,7 @@ URL de origem: {document.url}
 Retorne SOMENTE um array JSON. Cada item deve possuir exatamente:
 subject, topic, subtopic, difficulty (Fácil|Média|Difícil), statement,
 options (objeto com A, B, C, D, E), answer (A-E), explanation, tags (array de textos), cargo, year.
-A explicação deve justificar a correta e apontar por que a principal alternativa-distratora está errada.
+A explicação deve justificar a correta com base na fonte e apontar por que a principal alternativa-distratora está errada.
 Garanta apenas uma resposta correta e alternativas plausíveis.
 
 CONTEÚDO DA FONTE:
@@ -88,11 +93,11 @@ CONTEÚDO DA FONTE:
             "messages": [
                 {
                     "role": "system",
-                    "content": "Você é um elaborador e revisor de questões de concursos públicos brasileiros. Responda somente JSON válido.",
+                    "content": "Você elabora questões de concursos usando somente a fonte fornecida e responde apenas JSON válido.",
                 },
                 {"role": "user", "content": prompt},
             ],
-            "temperature": 0.35,
+            "temperature": 0.2,
             "max_completion_tokens": 5000,
         },
         timeout=90,
@@ -119,6 +124,8 @@ CONTEÚDO DA FONTE:
         answer = str(item.get("answer", "")).upper().strip()
         statement = str(item.get("statement", "")).strip()
         if set(options) != set("ABCDE") or answer not in options or len(statement) < 25:
+            continue
+        if len({value.casefold() for value in options.values()}) != 5:
             continue
 
         candidates.append(
