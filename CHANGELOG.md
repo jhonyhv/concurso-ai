@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.2-beta
+- Fonte principal alterada para o índice oficial da Cesgranrio do Banco do Brasil 2022/001.
+- Descoberta do Edital nº 01, provas A/B/C e gabaritos oficiais de Agente Comercial.
+- Exclusão automática dos documentos de Agente de Tecnologia e páginas administrativas.
+- Seleção de apenas um caderno por prova para evitar versões duplicadas com alternativas reordenadas.
+- Preferência pelos gabaritos alterados/finais quando disponíveis.
+- Geração baseada em um edital e até duas provas oficiais para combinar conteúdo programático e padrão da banca.
+
 ## 1.1.1-beta
 - Bloqueio de páginas de convocação, posse, transparência, notícias e outras fontes inadequadas.
 - Geração restrita a editais, conteúdos programáticos, provas e normativos com texto suficiente.
