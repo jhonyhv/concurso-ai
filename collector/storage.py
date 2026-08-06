@@ -28,7 +28,6 @@ class SupabaseStorage:
         self.headers = {
             "apikey": self.key,
             "Content-Type": "application/json",
-            "Prefer": "resolution=merge-duplicates,return=minimal",
         }
 
         # As chaves legadas service_role são JWTs e podem ser enviadas
@@ -66,7 +65,10 @@ class SupabaseStorage:
             return 0
         response = requests.post(
             f"{self.url}/rest/v1/source_documents?on_conflict=content_hash",
-            headers=self.headers,
+            headers={
+                **self.headers,
+                "Prefer": "resolution=merge-duplicates,return=minimal",
+            },
             data=json.dumps(rows, ensure_ascii=False),
             timeout=60,
         )
@@ -82,14 +84,22 @@ class SupabaseStorage:
             rows.append(row)
         if not rows:
             return 0
+
+        # Uma questão já revisada não pode voltar para pending_review em uma
+        # coleta futura. Duplicatas são ignoradas; apenas questões realmente
+        # novas são inseridas na fila de revisão.
         response = requests.post(
             f"{self.url}/rest/v1/questions_catalog?on_conflict=source_uid",
-            headers=self.headers,
+            headers={
+                **self.headers,
+                "Prefer": "resolution=ignore-duplicates,return=representation",
+            },
             data=json.dumps(rows, ensure_ascii=False),
             timeout=90,
         )
         self._raise_for_status(response)
-        return len(rows)
+        inserted = response.json() if response.content else []
+        return len(inserted) if isinstance(inserted, list) else 0
 
     def log_run(
         self,
