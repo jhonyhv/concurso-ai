@@ -43,9 +43,9 @@ BLOCKED_DISCOVERY_TERMS = (
 OFFICIAL_SEEDS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "bb_concurso": (
         (
-            "Índice oficial Banco do Brasil 2022/001",
-            "https://www.cesgranrio.org.br/concurso/banco-do-brasil-bb-01-2022/",
-            "reference",
+            "Edital no 01 - Seleção Externa Banco do Brasil 2022/001",
+            "https://www.bb.com.br/docs/portal/dipes/Edital-de-Abertura-de-Selecao-Externa-2022-01.pdf",
+            "notice",
         ),
     ),
 }
@@ -102,8 +102,7 @@ def _bb_document_allowed(document: DocumentLink) -> bool:
 def _select_bb_documents(documents: list[DocumentLink], limit: int) -> list[DocumentLink]:
     selected: list[DocumentLink] = []
 
-    # Um caderno de cada tipo, sempre preferindo o Gabarito 1 para evitar
-    # cinco versões com as mesmas questões e alternativas reordenadas.
+    # Mantém suporte a provas oficiais caso o BB passe a hospedá-las diretamente.
     exams = [document for document in documents if document.kind == "exam"]
     for letter in ("A", "B", "C"):
         candidates = [document for document in exams if _bb_exam_letter(document) == letter]
@@ -116,7 +115,6 @@ def _select_bb_documents(documents: list[DocumentLink], limit: int) -> list[Docu
         if candidates:
             selected.append(candidates[0])
 
-    # Usa o gabarito alterado/final quando disponível, um para cada prova.
     answers = [document for document in documents if document.kind == "answer"]
     for letter in ("A", "B", "C"):
         candidates = [document for document in answers if _bb_exam_letter(document) == letter]
