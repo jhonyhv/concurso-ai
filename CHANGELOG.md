@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0-beta
+- Novas questões geradas pela IA entram como `pending_review`.
+- Painel administrativo protegido por senha no Streamlit.
+- Edição de matéria, assunto, alternativas, gabarito, explicação, tags, cargo e ano.
+- Ações para aprovar, publicar ou rejeitar questões.
+- Contadores de pendentes, publicadas e rejeitadas.
+- Preservação das decisões de revisão em coletas futuras.
+- Remoção local de questões que deixarem de estar publicadas.
+- Compatibilidade com as novas chaves `sb_publishable_` e `sb_secret_` do Supabase.
+- Validação de sintaxe Python antes da execução do coletor.
+
 ## 1.0.0-beta
 - Coletor automático agendado por GitHub Actions.
 - Descoberta de documentos em fontes oficiais.
@@ -7,7 +18,6 @@
 - Catálogo central no Supabase e sincronização automática no aplicativo.
 - Deduplicação por hash e publicação apenas de itens validados.
 - Painel de acompanhamento do catálogo automático.
-
 
 ## v0.9.0 — 06/08/2026
 
