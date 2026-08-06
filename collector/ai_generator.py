@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import time
@@ -13,6 +14,8 @@ from collector.models import CandidateQuestion, ExtractedDocument, SourceConfig
 
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-oss-20b"
+MIN_SOURCE_CHARS = 250
+LOGGER = logging.getLogger("concursoai.collector.ai")
 
 
 def _normalized(value: str) -> str:
@@ -42,9 +45,18 @@ def generate_original_questions(
     quantity: int = 5,
 ) -> list[CandidateQuestion]:
     api_key = os.getenv("GROQ_API_KEY", "").strip()
-    if not api_key or len(document.text) < 500:
+    if not api_key:
+        LOGGER.warning("GROQ_API_KEY não configurada; geração ignorada.")
         return []
-    model = os.getenv("GROQ_MODEL", DEFAULT_MODEL)
+    if len(document.text) < MIN_SOURCE_CHARS:
+        LOGGER.warning(
+            "Fonte curta demais para geração: %s (%s caracteres)",
+            document.url,
+            len(document.text),
+        )
+        return []
+
+    model = os.getenv("GROQ_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
     source_text = document.text[:14000]
     prompt = f"""
 Crie {quantity} questões INÉDITAS para uma plataforma de preparação para concursos.
@@ -66,6 +78,7 @@ Garanta apenas uma resposta correta e alternativas plausíveis.
 CONTEÚDO DA FONTE:
 {source_text}
 """.strip()
+
     started = time.perf_counter()
     response = requests.post(
         API_URL,
@@ -73,23 +86,41 @@ CONTEÚDO DA FONTE:
         json={
             "model": model,
             "messages": [
-                {"role": "system", "content": "Você é um elaborador e revisor de questões de concursos públicos brasileiros. Responda somente JSON válido."},
+                {
+                    "role": "system",
+                    "content": "Você é um elaborador e revisor de questões de concursos públicos brasileiros. Responda somente JSON válido.",
+                },
                 {"role": "user", "content": prompt},
             ],
-            "temperature": 0.45,
+            "temperature": 0.35,
             "max_completion_tokens": 5000,
         },
         timeout=90,
     )
-    response.raise_for_status()
-    data = _extract_json(str(response.json()["choices"][0]["message"]["content"]))
+    if not response.ok:
+        raise RuntimeError(f"Groq HTTP {response.status_code}: {response.text[:500]}")
+
+    payload = response.json()
+    content = str(payload["choices"][0]["message"]["content"])
+    data = _extract_json(content)
     candidates: list[CandidateQuestion] = []
+
     for item in data:
-        options = {str(key).upper(): str(value).strip() for key, value in dict(item.get("options", {})).items() if str(key).upper() in "ABCDE"}
+        if not isinstance(item, dict):
+            continue
+        raw_options = item.get("options", {})
+        if not isinstance(raw_options, dict):
+            continue
+        options = {
+            str(key).upper(): str(value).strip()
+            for key, value in raw_options.items()
+            if str(key).upper() in "ABCDE"
+        }
         answer = str(item.get("answer", "")).upper().strip()
         statement = str(item.get("statement", "")).strip()
         if set(options) != set("ABCDE") or answer not in options or len(statement) < 25:
             continue
+
         candidates.append(
             CandidateQuestion(
                 source_uid=_uid(source, statement, options),
@@ -114,5 +145,12 @@ CONTEÚDO DA FONTE:
                 confidence=0.9,
             )
         )
-    _ = int((time.perf_counter() - started) * 1000)
+
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    LOGGER.info(
+        "Groq gerou %s questão(ões) válidas para %s em %sms",
+        len(candidates),
+        document.url,
+        elapsed_ms,
+    )
     return candidates
