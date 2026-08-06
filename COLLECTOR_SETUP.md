@@ -50,6 +50,26 @@ No aplicativo:
 
 Somente itens com status `published` aparecem para estudantes e simulados.
 
+## Fontes oficiais do Banco do Brasil
+
+A fonte principal é o índice oficial da Fundação Cesgranrio da Seleção Externa Banco do Brasil 2022/001:
+
+```text
+https://www.cesgranrio.org.br/concurso/banco-do-brasil-bb-01-2022/
+```
+
+O coletor seleciona automaticamente:
+
+- Edital nº 01 — 2022/001;
+- Prova A — Agente Comercial — Gabarito 1;
+- Prova B — Agente Comercial — Gabarito 1;
+- Prova C — Agente Comercial — Gabarito 1;
+- gabaritos oficiais ou alterados das provas A, B e C.
+
+Documentos de Agente de Tecnologia, páginas de convocação, posse, notícias e versões duplicadas das provas são ignorados.
+
+Na geração, a IA recebe um edital e até duas provas aprovadas pelo filtro de qualidade. As questões resultantes são inéditas e permanecem pendentes até a revisão administrativa.
+
 ## Funcionamento diário
 
 O workflow roda diariamente às 06:17 UTC. Ele:
