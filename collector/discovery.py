@@ -13,6 +13,15 @@ KEYWORDS = {
     "notice": ("edital", "conteúdo programático", "programa"),
 }
 
+OFFICIAL_SEEDS: dict[str, tuple[tuple[str, str, str], ...]] = {
+    "bb_concurso": (
+        ("Concurso Banco do Brasil", "https://www.bb.com.br/site/concurso-bb/", "reference"),
+        ("Seleção Externa e convocações", "https://www.bb.com.br/site/concurso-bb/convocacao-e-posse-de-novos-funcionarios/", "notice"),
+        ("Carreira Agente Comercial", "https://www.bb.com.br/site/concurso-bb/agente-comercial/", "reference"),
+        ("Editais de concursos do Banco do Brasil", "https://www.bb.com.br/site/portal-da-transparencia/", "notice"),
+    ),
+}
+
 
 def classify_document(title: str, url: str) -> str:
     text = f"{title} {url}".lower()
@@ -26,6 +35,10 @@ def discover_documents(source: SourceConfig, client: HttpClient) -> list[Documen
     response = client.get(source.page_url)
     soup = BeautifulSoup(response.text, "html.parser")
     found: dict[str, DocumentLink] = {}
+
+    for title, url, kind in OFFICIAL_SEEDS.get(source.source_id, ()):
+        if client.domain_allowed(url, source.allowed_domains):
+            found[url] = DocumentLink(source.source_id, title, url, kind)
 
     for anchor in soup.select("a[href]"):
         href = str(anchor.get("href") or "").strip()
