@@ -16,10 +16,7 @@ LOGGER = logging.getLogger("concursoai.collector")
 
 
 def _generation_documents(documents: list[ExtractedDocument]) -> list[ExtractedDocument]:
-    ordered = sorted(
-        documents,
-        key=lambda doc: (doc.kind not in {"exam", "notice"}, -len(doc.text)),
-    )
+    ordered = sorted(documents, key=lambda document: -len(document.text))
     eligible: list[ExtractedDocument] = []
     for document in ordered:
         accepted, reason = assess_generation_document(document)
@@ -40,7 +37,21 @@ def _generation_documents(documents: list[ExtractedDocument]) -> list[ExtractedD
                 document.url,
                 reason,
             )
-    return eligible[:3]
+
+    # O edital fundamenta o conteúdo programático; as provas fornecem o padrão
+    # de cobrança da banca. Essa combinação reduz alucinações e duplicidades.
+    notices = [document for document in eligible if document.kind == "notice"]
+    exams = [document for document in eligible if document.kind == "exam"]
+    selected = notices[:1] + exams[:2]
+
+    if len(selected) < 3:
+        selected_urls = {document.url for document in selected}
+        selected.extend(
+            document
+            for document in eligible
+            if document.url not in selected_urls
+        )
+    return selected[:3]
 
 
 def collect_source(source: SourceConfig, storage: SupabaseStorage, max_questions_per_document: int = 5) -> dict[str, int]:
