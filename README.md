@@ -1,15 +1,19 @@
-# BB Master AI
+# ConcursoAI — Banco do Brasil
 
-MVP de uma plataforma pessoal para preparação para o concurso do Banco do Brasil.
+Plataforma pessoal de preparação para o concurso do Banco do Brasil, desenvolvida em Python, Streamlit e SQLite.
 
-## Recursos
+## Recursos da versão 0.5
 
-- painel com horas, questões e percentual de acertos;
+- dashboard de desempenho e tempo de estudo;
 - plano semanal proporcional ao peso das matérias;
-- banco inicial de questões com correção comentada;
+- banco de questões com filtros por concurso, banca, matéria, assunto e dificuldade;
+- pesquisa por texto;
+- questões favoritas;
+- caderno de erros com controle de revisão;
+- histórico e estatísticas por matéria;
+- migração automática do banco SQLite sem apagar os dados existentes;
 - registro de sessões de estudo;
-- conteúdo programático inicial;
-- armazenamento local em SQLite.
+- conteúdo programático inicial.
 
 ## Instalação no Windows
 
@@ -27,16 +31,18 @@ streamlit run app.py
 
 O navegador abrirá em `http://localhost:8501`.
 
+## Banco de dados
+
+O banco fica em `data/bb_master.db`. Na primeira execução da versão 0.5, o aplicativo adiciona automaticamente as novas colunas e tabelas necessárias, preservando questões, tentativas e sessões já registradas.
+
 ## Próximas versões
 
-- importação do edital em PDF;
-- cadastro e importação de questões por CSV;
-- flashcards com revisão espaçada;
-- simulados completos e cronômetro;
-- autenticação e sincronização online;
 - professor com IA;
-- exportação do desempenho.
+- flashcards e revisão espaçada;
+- simulados completos com cronômetro;
+- importação de questões por CSV;
+- autenticação e sincronização online.
 
 ## Aviso
 
-O conteúdo programático incluído é apenas uma base inicial inspirada na seleção anterior. O edital oficial vigente deve sempre ser a fonte principal.
+O conteúdo programático incluído é apenas uma base inicial. O edital oficial vigente deve sempre ser a fonte principal.

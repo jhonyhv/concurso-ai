@@ -92,3 +92,51 @@
 .stButton > button, .stFormSubmitButton > button { border-radius:10px; font-weight:700; }
 [data-testid="stDataFrame"] { border:1px solid var(--border); border-radius:12px; overflow:hidden; }
 @media (max-width: 900px) { .top-header h1 { font-size:1.55rem; } .profile-area { display:none; } }
+
+/* Banco de questões v0.5 */
+.question-counter {
+  display: inline-flex;
+  align-items: center;
+  margin: .55rem 0 .35rem;
+  padding: .3rem .65rem;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+[data-testid="stMain"] [data-testid="stRadio"] > div[role="radiogroup"] label {
+  padding: .62rem .75rem;
+  border: 1px solid #e7ebf2;
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: .35rem;
+}
+
+[data-testid="stMain"] [data-testid="stRadio"] > div[role="radiogroup"] label:hover {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  gap: .35rem;
+  border-bottom: 1px solid #e7ebf2;
+}
+
+[data-testid="stTabs"] [data-baseweb="tab"] {
+  border-radius: 9px 9px 0 0;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-weight: 750;
+}
+
+[data-testid="stExpander"] {
+  border: 1px solid #e7ebf2;
+  border-radius: 12px;
+  background: #fff;
+}
+
+/* O aplicativo usa navegação própria no menu lateral. */
+[data-testid="stSidebarNav"] { display: none; }
