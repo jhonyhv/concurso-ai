@@ -141,7 +141,7 @@ CONTEÚDO DA FONTE:
                 source_url=document.url,
                 source_kind="ai_original",
                 license_name=source.license_name,
-                status="published",
+                status="pending_review",
                 confidence=0.9,
             )
         )
