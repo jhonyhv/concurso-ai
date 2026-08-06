@@ -13,15 +13,39 @@ from collector.models import CandidateQuestion, ExtractedDocument
 class SupabaseStorage:
     def __init__(self) -> None:
         self.url = os.getenv("SUPABASE_URL", "").rstrip("/")
-        self.key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+        self.key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
         if not self.url or not self.key:
-            raise RuntimeError("SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios para publicar automaticamente.")
+            raise RuntimeError(
+                "SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios "
+                "para publicar automaticamente."
+            )
+        if self.key.startswith("sb_publishable_"):
+            raise RuntimeError(
+                "SUPABASE_SERVICE_ROLE_KEY recebeu uma chave publicável. "
+                "Use a Secret key sb_secret_... ou a service_role legada."
+            )
+
         self.headers = {
             "apikey": self.key,
-            "Authorization": f"Bearer {self.key}",
             "Content-Type": "application/json",
             "Prefer": "resolution=merge-duplicates,return=minimal",
         }
+
+        # As chaves legadas service_role são JWTs e podem ser enviadas
+        # no cabeçalho Authorization. As novas sb_secret_ são opacas e
+        # devem ser enviadas somente no cabeçalho apikey.
+        if not self.key.startswith("sb_secret_"):
+            self.headers["Authorization"] = f"Bearer {self.key}"
+
+    @staticmethod
+    def _raise_for_status(response: requests.Response) -> None:
+        if response.ok:
+            return
+        detail = response.text[:500].strip()
+        raise requests.HTTPError(
+            f"Supabase retornou HTTP {response.status_code}: {detail}",
+            response=response,
+        )
 
     def upsert_documents(self, documents: Iterable[ExtractedDocument]) -> int:
         rows = [
@@ -46,7 +70,7 @@ class SupabaseStorage:
             data=json.dumps(rows, ensure_ascii=False),
             timeout=60,
         )
-        response.raise_for_status()
+        self._raise_for_status(response)
         return len(rows)
 
     def upsert_questions(self, questions: Iterable[CandidateQuestion]) -> int:
@@ -64,10 +88,17 @@ class SupabaseStorage:
             data=json.dumps(rows, ensure_ascii=False),
             timeout=90,
         )
-        response.raise_for_status()
+        self._raise_for_status(response)
         return len(rows)
 
-    def log_run(self, source_id: str, status: str, documents: int, questions: int, message: str = "") -> None:
+    def log_run(
+        self,
+        source_id: str,
+        status: str,
+        documents: int,
+        questions: int,
+        message: str = "",
+    ) -> None:
         response = requests.post(
             f"{self.url}/rest/v1/collector_runs",
             headers={**self.headers, "Prefer": "return=minimal"},
@@ -80,4 +111,4 @@ class SupabaseStorage:
             },
             timeout=30,
         )
-        response.raise_for_status()
+        self._raise_for_status(response)
