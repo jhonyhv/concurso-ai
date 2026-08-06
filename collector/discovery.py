@@ -8,17 +8,40 @@ from collector.http_client import HttpClient
 from collector.models import DocumentLink, SourceConfig
 
 KEYWORDS = {
-    "answer": ("gabarito", "resposta", "padrão definitivo"),
-    "exam": ("caderno de prova", "caderno de provas", "prova objetiva", "provas objetivas", "prova"),
-    "notice": ("edital", "conteúdo programático", "programa"),
+    "answer": ("gabarito", "resposta", "padrão definitivo", "padrao definitivo"),
+    "exam": (
+        "caderno de prova",
+        "caderno de provas",
+        "prova objetiva",
+        "provas objetivas",
+        "prova",
+    ),
+    "notice": (
+        "edital",
+        "conteúdo programático",
+        "conteudo programatico",
+        "programa de provas",
+        "regulamento",
+        "normativo",
+    ),
 }
+
+BLOCKED_DISCOVERY_TERMS = (
+    "convocacao",
+    "convocação",
+    "posse",
+    "portal-da-transparencia",
+    "portal da transparência",
+    "agente-comercial",
+    "trabalhe-conosco",
+    "noticia",
+    "notícia",
+    "imprensa",
+)
 
 OFFICIAL_SEEDS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "bb_concurso": (
         ("Concurso Banco do Brasil", "https://www.bb.com.br/site/concurso-bb/", "reference"),
-        ("Seleção Externa e convocações", "https://www.bb.com.br/site/concurso-bb/convocacao-e-posse-de-novos-funcionarios/", "notice"),
-        ("Carreira Agente Comercial", "https://www.bb.com.br/site/concurso-bb/agente-comercial/", "reference"),
-        ("Editais de concursos do Banco do Brasil", "https://www.bb.com.br/site/portal-da-transparencia/", "notice"),
     ),
 }
 
@@ -47,14 +70,17 @@ def discover_documents(source: SourceConfig, client: HttpClient) -> list[Documen
         absolute = urldefrag(urljoin(response.url, href)).url
         if not client.domain_allowed(absolute, source.allowed_domains):
             continue
+
         title = " ".join(anchor.get_text(" ", strip=True).split()) or absolute.rsplit("/", 1)[-1]
         kind = classify_document(title, absolute)
         searchable = f"{title} {absolute}".lower()
+        if any(term in searchable for term in BLOCKED_DISCOVERY_TERMS):
+            continue
+
         looks_relevant = (
             absolute.lower().endswith(".pdf")
             or "/view" in absolute.lower()
             or kind != "reference"
-            or any(token in searchable for token in ("concurso", "seleção externa", "selecao externa"))
         )
         if looks_relevant:
             found[absolute] = DocumentLink(source.source_id, title[:240], absolute, kind)
