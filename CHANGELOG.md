@@ -1,26 +1,37 @@
 # Changelog
 
+## v0.9.0 — 06/08/2026
+
+### Professor IA
+- integração opcional com a API Groq;
+- seleção entre modo automático, online e local;
+- contexto baseado em desempenho, assuntos fracos e caderno de erros;
+- formatos de resposta para explicação, plano, revisão e resposta objetiva;
+- teste de conexão e histórico técnico de uso;
+- fallback automático para o modo local.
+
+### Interface
+- tema escuro funcional;
+- cabeçalho com página atual, data em português e revisões pendentes;
+- indicador de versão e estado;
+- refinamentos de responsividade, botões, chat e cartões.
+
+### Segurança e dados
+- chave da IA armazenada somente em segredo ou variável de ambiente;
+- download e restauração de backup SQLite;
+- validação de integridade antes da restauração;
+- novas tabelas e migrações sem apagar dados existentes.
+
+### Deploy
+- configuração do Streamlit;
+- modelo de arquivo de segredos;
+- guia `DEPLOY.md` para Streamlit Community Cloud;
+- aviso sobre persistência do SQLite em ambientes temporários.
+
 ## v0.8.0 — 06/08/2026
 
-### v0.6 incluída
-- novo dashboard e identidade visual;
-- menu lateral completo;
-- evolução de acertos e calendário heatmap;
-- metas e revisões no painel principal.
-
-### v0.7 incluída
-- metas diárias configuráveis;
-- calendário e histórico;
-- revisão espaçada integrada ao caderno de erros;
-- agenda de próximas revisões.
-
-### v0.8 incluída
-- flashcards com biblioteca, favoritos e revisão;
-- geração de flashcards a partir dos erros;
-- simulados e histórico de resultados;
-- Professor IA local orientado pelo desempenho;
-- páginas de estatísticas, desempenho e configurações.
-
-### Compatibilidade
-- migração automática do banco da v0.5;
-- preservação de questões, tentativas, favoritos, erros e sessões de estudo.
+- dashboard e menu completo;
+- metas, calendário e revisão espaçada;
+- flashcards, simulados e Professor IA local;
+- estatísticas, desempenho e configurações;
+- compatibilidade com a base v0.5.

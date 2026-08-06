@@ -88,6 +88,10 @@ ATTEMPT_MIGRATIONS = {
     "elapsed_seconds": "INTEGER NOT NULL DEFAULT 0",
 }
 
+SETTINGS_MIGRATIONS = {
+    "ai_model": "TEXT NOT NULL DEFAULT 'openai/gpt-oss-20b'",
+}
+
 
 def connect() -> sqlite3.Connection:
     """Abre uma conexão SQLite configurada para o aplicativo."""
@@ -172,6 +176,7 @@ def init_db() -> None:
                 daily_reviews_goal INTEGER NOT NULL DEFAULT 3,
                 daily_flashcards_goal INTEGER NOT NULL DEFAULT 10,
                 theme TEXT NOT NULL DEFAULT 'claro',
+                ai_model TEXT NOT NULL DEFAULT 'openai/gpt-oss-20b',
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -245,11 +250,22 @@ def init_db() -> None:
                 response TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS ai_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                provider TEXT NOT NULL,
+                model TEXT NOT NULL,
+                latency_ms INTEGER NOT NULL DEFAULT 0,
+                success INTEGER NOT NULL DEFAULT 1,
+                error_message TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
 
         _apply_migrations(connection, "questions", QUESTION_MIGRATIONS)
         _apply_migrations(connection, "attempts", ATTEMPT_MIGRATIONS)
+        _apply_migrations(connection, "settings", SETTINGS_MIGRATIONS)
 
         connection.executescript(
             """
@@ -262,6 +278,7 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_study_date ON study_sessions(session_date);
             CREATE INDEX IF NOT EXISTS idx_reviews_due ON reviews(due_date, status);
             CREATE INDEX IF NOT EXISTS idx_flashcards_due ON flashcards(due_date);
+            CREATE INDEX IF NOT EXISTS idx_ai_usage_date ON ai_usage(created_at);
             """
         )
 
@@ -406,4 +423,5 @@ def get_settings() -> dict[str, object]:
         "daily_reviews_goal": 3,
         "daily_flashcards_goal": 10,
         "theme": "claro",
+        "ai_model": "openai/gpt-oss-20b",
     }

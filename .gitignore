@@ -8,17 +8,19 @@ __pycache__/
 venv/
 env/
 
-# SQLite
+# SQLite local data
 *.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 
-# Environment
+# Environment and secrets
 .env
+.streamlit/secrets.toml
 
 # VS Code
 .vscode/
-
-# Streamlit
-.streamlit/
 
 # Logs
 *.log

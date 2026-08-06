@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import streamlit as st
 
 from components.header import render_header
@@ -15,8 +17,11 @@ from services.settings import render_settings_page
 from services.simulations import render_simulations_page
 from services.study import render_study_page
 
+VERSION_FILE = Path(__file__).resolve().parent / "VERSION"
+VERSION = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "0.9.0"
+
 st.set_page_config(
-    page_title="ConcursoAI",
+    page_title=f"ConcursoAI v{VERSION}",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -25,7 +30,7 @@ st.set_page_config(
 init_db()
 load_global_css()
 page = render_sidebar()
-render_header()
+render_header(page)
 
 PAGES = {
     "Dashboard": render_dashboard,

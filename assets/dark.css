@@ -1,0 +1,34 @@
+:root {
+  --bg: #09111f;
+  --surface: #111c2f;
+  --surface-soft: #16243a;
+  --border: #253752;
+  --text: #eef4ff;
+  --muted: #a9b6ca;
+  --muted-2: #8190a7;
+  --blue: #6ea0ff;
+  --blue-soft: #172b50;
+  --green: #48cf83;
+  --shadow: 0 12px 34px rgba(0,0,0,.28);
+}
+.stApp, [data-testid="stAppViewContainer"] { background:var(--bg); color:var(--text); }
+[data-testid="stSidebar"] { background:#0d1728; border-right-color:var(--border); }
+[data-testid="stSidebar"] .stButton > button { color:#b4c0d2; }
+[data-testid="stSidebar"] .stButton > button:hover { background:#162641; color:#8bb1ff; }
+[data-testid="stSidebar"] .stButton > button[kind="primary"] { background:#172b50; color:#8bb1ff; border-color:#29497a; }
+.brand-v2 strong, .top-header h1, .metric-label-v2, .panel-header h3,
+.review-text strong, .goal-main strong, .study-card h3, .flashcard-question,
+.premium-card strong { color:var(--text) !important; }
+.top-header p, .profile-name, .metric-detail-v2, .panel-header span,
+.review-text span, .goal-main span, .premium-card p { color:var(--muted) !important; }
+.metric-card-v2, .dashboard-panel, .study-card, .flashcard-shell,
+.review-item, .goal-row, [data-testid="stMetric"], [data-testid="stExpander"],
+[data-testid="stChatMessage"], [data-testid="stVerticalBlockBorderWrapper"],
+.notification, .premium-card { background:var(--surface) !important; border-color:var(--border) !important; }
+.review-mini, [data-testid="stMain"] [data-testid="stRadio"] > div[role="radiogroup"] label {
+  background:var(--surface-soft) !important; border-color:var(--border) !important; color:var(--text) !important;
+}
+[data-baseweb="input"] > div, [data-baseweb="select"] > div, textarea,
+[data-testid="stFileUploaderDropzone"] { background:var(--surface) !important; color:var(--text) !important; border-color:var(--border) !important; }
+[data-testid="stDataFrame"] { border-color:var(--border); }
+hr { border-color:var(--border); }

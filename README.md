@@ -1,48 +1,36 @@
 # ConcursoAI — Banco do Brasil Edition
 
-Plataforma pessoal de preparação para o concurso do Banco do Brasil, desenvolvida em Python, Streamlit e SQLite.
+Plataforma pessoal de preparação para concursos, desenvolvida em Python, Streamlit e SQLite.
 
-## Versão 0.8 completa
+## Versão 0.9
 
-Esta entrega reúne as sprints **v0.6, v0.7 e v0.8**.
+A v0.9 consolida os recursos anteriores e adiciona acabamento visual, IA online opcional, tema escuro, backup e preparação para publicação.
 
-### v0.6 — Interface e dashboard
+### Recursos principais
 
-- dashboard inspirado na referência visual enviada;
-- menu lateral organizado por Estudos, IA, Análises e Outros;
-- cards de sequência, questões, taxa de acertos e tempo de estudo;
-- evolução de acertos nos últimos sete dias;
-- calendário de estudos em formato heatmap;
-- desempenho por matéria;
-- meta diária e próximas revisões.
+- dashboard responsivo com metas, sequência, evolução e calendário;
+- banco de questões com filtros, favoritos e caderno de erros;
+- simulados com histórico e aproveitamento;
+- flashcards e revisão espaçada;
+- metas diárias, calendário e registro de estudos;
+- estatísticas e diagnóstico por matéria;
+- Professor IA em modo local ou online;
+- backup e restauração do banco SQLite;
+- tema claro e escuro;
+- arquivos preparados para Streamlit Community Cloud.
 
-### v0.7 — Metas e revisão espaçada
+## Professor IA online
 
-- metas diárias configuráveis;
-- calendário com intensidade de estudo;
-- agenda de revisões;
-- algoritmo de revisão espaçada;
-- integração automática com o caderno de erros;
-- histórico de estudos e revisões.
+A integração online usa a API Groq e mantém a chave fora do código e do banco.
 
-### v0.8 — Flashcards, simulados e Professor IA
+Crie `.streamlit/secrets.toml` com:
 
-- criação e biblioteca de flashcards;
-- cartões gerados a partir do caderno de erros;
-- revisão de flashcards com cálculo da próxima data;
-- simulados por matéria e quantidade de questões;
-- histórico de simulados;
-- Professor IA em modo local, conectado ao banco de questões e ao desempenho;
-- estatísticas e diagnóstico de prioridades.
+```toml
+GROQ_API_KEY = "sua-chave"
+GROQ_MODEL = "openai/gpt-oss-20b"
+```
 
-## Recursos preservados da v0.5
-
-- banco de questões com filtros avançados;
-- pesquisa por texto;
-- favoritos;
-- caderno de erros;
-- histórico de respostas;
-- migração automática do SQLite sem apagar os dados existentes.
+Sem a chave, o Professor IA continua funcionando no modo local.
 
 ## Instalação no Windows
 
@@ -55,12 +43,12 @@ streamlit run app.py
 
 Também é possível executar `run_windows.bat`.
 
-## Atualização preservando seus dados
+## Atualização preservando dados
 
-Use o ZIP de atualização e extraia sobre a pasta atual. Ele não contém a pasta `.git` nem o arquivo `data/bb_master.db`.
+Use o ZIP de atualização e extraia sobre a pasta atual. Ele não contém `.git` nem `data/bb_master.db`.
 
-Na primeira execução, o sistema cria automaticamente as novas tabelas necessárias.
+Na primeira execução, o sistema realiza a migração do SQLite automaticamente.
 
-## Observação sobre o Professor IA
+## Publicação
 
-O tutor desta versão trabalha em modo local. Ele usa questões, explicações, erros, estatísticas e matérias armazenados no seu próprio banco, sem enviar dados para serviços externos.
+Consulte [`DEPLOY.md`](DEPLOY.md). Antes de publicar, considere que o SQLite pode não oferecer persistência permanente em hospedagens com disco temporário. Faça backups regulares pela tela **Configurações > Backup**.

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 import streamlit as st
 
 from database.database import get_settings
+from services.reviews import get_due_count
+from utils.helpers import format_date_pt
 
 
 def _greeting() -> tuple[str, str]:
@@ -16,22 +18,26 @@ def _greeting() -> tuple[str, str]:
     return "Boa noite", "👋"
 
 
-def render_header() -> None:
+def render_header(page: str = "Dashboard") -> None:
     settings = get_settings()
     name = str(settings.get("user_name", "Jhony"))
     greeting, icon = _greeting()
+    due = get_due_count()
+    badge = f'<span class="notify-badge">{min(due, 99)}</span>' if due else ""
     st.markdown(
         f"""
         <section class="top-header top-header-v2">
           <div class="header-main">
             <div class="menu-symbol">☰</div>
             <div>
+              <div class="page-kicker">{page} • {format_date_pt(date.today())}</div>
               <h1>{greeting}, {name}! <span>{icon}</span></h1>
               <p>Foque hoje, colha amanhã.</p>
             </div>
           </div>
           <div class="profile-area profile-v2">
-            <div class="notification">🔔<span class="notify-badge">3</span></div>
+            <div class="status-chip"><span></span> v0.9</div>
+            <div class="notification" title="{due} revisão(ões) para hoje">🔔{badge}</div>
             <div class="avatar avatar-photo">{name[:1].upper()}</div>
             <div class="profile-name">{name} ▾</div>
           </div>
