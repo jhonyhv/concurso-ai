@@ -58,7 +58,9 @@ def sync_remote_questions(force: bool = False) -> dict[str, object]:
     )
     response.raise_for_status()
     rows = response.json()
+    published_uids = [str(row.get("source_uid") or "") for row in rows if row.get("source_uid")]
     synced = 0
+
     with connect() as connection:
         for row in rows:
             options = row.get("options") or {}
@@ -110,6 +112,31 @@ def sync_remote_questions(force: bool = False) -> dict[str, object]:
                 values,
             )
             synced += 1
+
+        # Uma questão que deixou de ser publicada não pode continuar nos
+        # simulados locais. A limpeza é limitada aos itens do coletor remoto.
+        if published_uids:
+            placeholders = ",".join("?" for _ in published_uids)
+            connection.execute(
+                f"""
+                DELETE FROM questions
+                 WHERE source_uid IS NOT NULL
+                   AND source_uid <> ''
+                   AND source_kind IN ('ai_original', 'official')
+                   AND source_uid NOT IN ({placeholders})
+                """,
+                published_uids,
+            )
+        else:
+            connection.execute(
+                """
+                DELETE FROM questions
+                 WHERE source_uid IS NOT NULL
+                   AND source_uid <> ''
+                   AND source_kind IN ('ai_original', 'official')
+                """
+            )
+
         connection.execute(
             """
             INSERT INTO collector_sync_state(id, last_synced_at, last_count, last_error)
