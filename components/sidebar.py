@@ -3,6 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from database.database import get_settings
+from utils.version import get_version_label
 
 SECTIONS = [
     ("", [("Dashboard", "🏠")]),
@@ -15,6 +16,7 @@ SECTIONS = [
 
 def render_sidebar() -> str:
     settings = get_settings()
+    version_label = get_version_label()
     st.session_state.setdefault("current_page", "Dashboard")
 
     with st.sidebar:
@@ -48,7 +50,7 @@ def render_sidebar() -> str:
               <div class="upgrade-icon">👑</div>
               <strong>Plano de aprovação</strong>
               <p>{settings['user_name']}, mantenha suas metas, revisões e questões em dia.</p>
-              <div class="premium-pill">Versão 1.1 beta • Revisão administrativa</div>
+              <div class="premium-pill">Versão {version_label} • Revisão administrativa</div>
             </div>
             """,
             unsafe_allow_html=True,
