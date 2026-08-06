@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1-beta
+- Bloqueio de páginas de convocação, posse, transparência, notícias e outras fontes inadequadas.
+- Geração restrita a editais, conteúdos programáticos, provas e normativos com texto suficiente.
+- Remoção do fallback que combinava páginas curtas e irrelevantes.
+- Validação de tamanho, confiança, diversidade textual e sinais de conteúdo de concurso.
+- Instruções mais rigorosas para impedir fatos, valores, tarifas e regras não sustentados pela fonte.
+- Indicadores de versão do cabeçalho e da barra lateral sincronizados com o arquivo `VERSION`.
+
 ## 1.1.0-beta
 - Novas questões geradas pela IA entram como `pending_review`.
 - Painel administrativo protegido por senha no Streamlit.
