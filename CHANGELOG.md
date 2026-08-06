@@ -1,20 +1,26 @@
 # Changelog
 
-## 0.5.0 — Banco de Questões
+## v0.8.0 — 06/08/2026
 
-### Adicionado
+### v0.6 incluída
+- novo dashboard e identidade visual;
+- menu lateral completo;
+- evolução de acertos e calendário heatmap;
+- metas e revisões no painel principal.
 
-- migração automática do SQLite sem perda dos dados existentes;
-- filtros por concurso, banca, matéria, assunto e dificuldade;
-- pesquisa por texto no enunciado, explicação, assunto e tags;
-- questões favoritas;
-- caderno de erros com status pendente/revisada;
-- histórico de tentativas por questão;
-- estatísticas gerais e por matéria;
-- suporte a alternativa E e metadados de questões;
-- índices no banco para melhorar as consultas.
+### v0.7 incluída
+- metas diárias configuráveis;
+- calendário e histórico;
+- revisão espaçada integrada ao caderno de erros;
+- agenda de próximas revisões.
 
-### Alterado
+### v0.8 incluída
+- flashcards com biblioteca, favoritos e revisão;
+- geração de flashcards a partir dos erros;
+- simulados e histórico de resultados;
+- Professor IA local orientado pelo desempenho;
+- páginas de estatísticas, desempenho e configurações.
 
-- lógica da página de questões removida do `app.py` e organizada em `services/questions.py`;
-- documentação atualizada para a versão 0.5.
+### Compatibilidade
+- migração automática do banco da v0.5;
+- preservação de questões, tentativas, favoritos, erros e sessões de estudo.

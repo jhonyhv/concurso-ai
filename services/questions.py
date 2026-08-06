@@ -143,6 +143,26 @@ def save_attempt(
                 """,
                 (question_id, attempted_at),
             )
+            metadata = connection.execute(
+                "SELECT subject, assunto FROM questions WHERE id = ?",
+                (question_id,),
+            ).fetchone()
+            connection.execute(
+                """
+                INSERT INTO reviews(
+                    review_key, question_id, subject, topic, source, due_date, status
+                ) VALUES (?, ?, ?, ?, 'caderno de erros', date('now'), 'pendente')
+                ON CONFLICT(review_key) DO UPDATE SET
+                    due_date = date('now'),
+                    status = 'pendente'
+                """,
+                (
+                    f"error:{question_id}",
+                    question_id,
+                    metadata["subject"],
+                    metadata["assunto"] or "Geral",
+                ),
+            )
         connection.commit()
 
     return {
@@ -438,7 +458,7 @@ def _render_statistics() -> None:
 
 
 def render_questions_page() -> None:
-    st.subheader("📝 Banco de questões")
+    st.markdown("## ❓ Banco de questões")
     st.caption("Filtre, responda, favorite e revise os assuntos em que teve dificuldade.")
     resolver, errors, statistics = st.tabs(
         ["Resolver questões", "Caderno de erros", "Estatísticas"]

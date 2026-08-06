@@ -1,26 +1,50 @@
-# ConcursoAI — Banco do Brasil
+# ConcursoAI — Banco do Brasil Edition
 
 Plataforma pessoal de preparação para o concurso do Banco do Brasil, desenvolvida em Python, Streamlit e SQLite.
 
-## Recursos da versão 0.5
+## Versão 0.8 completa
 
-- dashboard de desempenho e tempo de estudo;
-- plano semanal proporcional ao peso das matérias;
-- banco de questões com filtros por concurso, banca, matéria, assunto e dificuldade;
+Esta entrega reúne as sprints **v0.6, v0.7 e v0.8**.
+
+### v0.6 — Interface e dashboard
+
+- dashboard inspirado na referência visual enviada;
+- menu lateral organizado por Estudos, IA, Análises e Outros;
+- cards de sequência, questões, taxa de acertos e tempo de estudo;
+- evolução de acertos nos últimos sete dias;
+- calendário de estudos em formato heatmap;
+- desempenho por matéria;
+- meta diária e próximas revisões.
+
+### v0.7 — Metas e revisão espaçada
+
+- metas diárias configuráveis;
+- calendário com intensidade de estudo;
+- agenda de revisões;
+- algoritmo de revisão espaçada;
+- integração automática com o caderno de erros;
+- histórico de estudos e revisões.
+
+### v0.8 — Flashcards, simulados e Professor IA
+
+- criação e biblioteca de flashcards;
+- cartões gerados a partir do caderno de erros;
+- revisão de flashcards com cálculo da próxima data;
+- simulados por matéria e quantidade de questões;
+- histórico de simulados;
+- Professor IA em modo local, conectado ao banco de questões e ao desempenho;
+- estatísticas e diagnóstico de prioridades.
+
+## Recursos preservados da v0.5
+
+- banco de questões com filtros avançados;
 - pesquisa por texto;
-- questões favoritas;
-- caderno de erros com controle de revisão;
-- histórico e estatísticas por matéria;
-- migração automática do banco SQLite sem apagar os dados existentes;
-- registro de sessões de estudo;
-- conteúdo programático inicial.
+- favoritos;
+- caderno de erros;
+- histórico de respostas;
+- migração automática do SQLite sem apagar os dados existentes.
 
 ## Instalação no Windows
-
-1. Instale o Python 3.11 ou superior.
-2. Extraia a pasta do projeto.
-3. Abra o PowerShell dentro da pasta.
-4. Execute:
 
 ```powershell
 python -m venv .venv
@@ -29,20 +53,14 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-O navegador abrirá em `http://localhost:8501`.
+Também é possível executar `run_windows.bat`.
 
-## Banco de dados
+## Atualização preservando seus dados
 
-O banco fica em `data/bb_master.db`. Na primeira execução da versão 0.5, o aplicativo adiciona automaticamente as novas colunas e tabelas necessárias, preservando questões, tentativas e sessões já registradas.
+Use o ZIP de atualização e extraia sobre a pasta atual. Ele não contém a pasta `.git` nem o arquivo `data/bb_master.db`.
 
-## Próximas versões
+Na primeira execução, o sistema cria automaticamente as novas tabelas necessárias.
 
-- professor com IA;
-- flashcards e revisão espaçada;
-- simulados completos com cronômetro;
-- importação de questões por CSV;
-- autenticação e sincronização online.
+## Observação sobre o Professor IA
 
-## Aviso
-
-O conteúdo programático incluído é apenas uma base inicial. O edital oficial vigente deve sempre ser a fonte principal.
+O tutor desta versão trabalha em modo local. Ele usa questões, explicações, erros, estatísticas e matérias armazenados no seu próprio banco, sem enviar dados para serviços externos.

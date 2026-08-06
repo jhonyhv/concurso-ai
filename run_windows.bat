@@ -1,10 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title BB Master AI
+title ConcursoAI
 
 echo ========================================
-echo        Iniciando BB Master AI
+echo        Iniciando ConcursoAI
 echo ========================================
 echo.
 
@@ -34,7 +34,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo Abrindo o BB Master AI no navegador...
+echo Abrindo o ConcursoAI no navegador...
 %PYTHON_CMD% -m streamlit run app.py
 
 if errorlevel 1 (
