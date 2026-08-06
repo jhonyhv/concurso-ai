@@ -9,11 +9,11 @@ SOURCES: tuple[SourceConfig, ...] = (
         organization="Banco do Brasil",
         bank="Cesgranrio",
         contest="Banco do Brasil",
-        page_url="https://www.bb.com.br/site/concurso-bb/convocacao-e-posse-de-novos-funcionarios/",
+        page_url="https://www.bb.com.br/site/concurso-bb/",
         allowed_domains=("bb.com.br", "www.bb.com.br", "cesgranrio.org.br", "www.cesgranrio.org.br"),
         mode="generate_original",
         license_name="fonte_oficial_sem_licenca_de_reproducao_confirmada",
-        max_documents=8,
+        max_documents=10,
         default_subject="Conhecimentos Bancários",
         style_notes=(
             "Questões inéditas para Agente Comercial do Banco do Brasil, estilo Cesgranrio, "
