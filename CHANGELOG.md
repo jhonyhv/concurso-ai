@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0-beta
+- Coletor automático agendado por GitHub Actions.
+- Descoberta de documentos em fontes oficiais.
+- Extração de HTML/PDF e geração de questões inéditas por IA.
+- Catálogo central no Supabase e sincronização automática no aplicativo.
+- Deduplicação por hash e publicação apenas de itens validados.
+- Painel de acompanhamento do catálogo automático.
+
+
 ## v0.9.0 — 06/08/2026
 
 ### Professor IA

@@ -6,7 +6,9 @@ from components.header import render_header
 from components.sidebar import render_sidebar
 from components.theme import load_global_css
 from database.database import init_db
+from database.remote_sync import sync_remote_questions
 from services.analytics import render_performance_page, render_statistics_page
+from services.collector_admin import render_collector_page
 from services.dashboard import render_dashboard
 from services.flashcards import render_flashcards_page
 from services.goals import render_calendar_page, render_goals_page
@@ -28,6 +30,10 @@ st.set_page_config(
 )
 
 init_db()
+try:
+    sync_remote_questions()
+except Exception:
+    pass
 load_global_css()
 page = render_sidebar()
 render_header(page)
@@ -44,6 +50,7 @@ PAGES = {
     "Revisões": render_reviews_page,
     "Metas": render_goals_page,
     "Calendário": render_calendar_page,
+    "Coletor automático": render_collector_page,
     "Configurações": render_settings_page,
 }
 
