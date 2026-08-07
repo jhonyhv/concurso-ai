@@ -135,12 +135,20 @@ def _render_backup_settings() -> None:
             st.error(str(exc))
 
 
+def _render_admin_settings() -> None:
+    st.markdown("### Administração do catálogo")
+    st.caption("Área reservada para coleta, revisão e publicação das questões automáticas.")
+    if st.button("Abrir Coletor e revisão", type="primary", use_container_width=True, key="open_collector_admin"):
+        st.session_state.current_page = "Coletor automático"
+        st.rerun()
+
+
 def render_settings_page() -> None:
     st.markdown("## ⚙️ Configurações")
-    st.caption("Personalização, IA online, backup e informações da instalação.")
+    st.caption("Personalização, IA online, backup e administração da plataforma.")
 
-    general_tab, ai_tab, backup_tab, about_tab = st.tabs(
-        ["Geral", "Professor IA", "Backup", "Sobre"]
+    general_tab, ai_tab, backup_tab, admin_tab, about_tab = st.tabs(
+        ["Geral", "Professor IA", "Backup", "Administração", "Sobre"]
     )
     with general_tab:
         _render_general_settings()
@@ -148,12 +156,12 @@ def render_settings_page() -> None:
         _render_ai_settings()
     with backup_tab:
         _render_backup_settings()
+    with admin_tab:
+        _render_admin_settings()
     with about_tab:
-        st.info(
-            "ConcursoAI v0.9 adiciona IA online opcional, tema escuro, backup do banco e preparação para deploy."
-        )
+        st.info("ConcursoAI — plataforma de preparação para concursos com revisão, simulados e IA.")
         st.markdown(
             "- Os dados de estudo ficam no SQLite local.\n"
             "- A chave da IA não é salva no banco nem no GitHub.\n"
-            "- Para publicação, consulte `DEPLOY.md`."
+            "- O catálogo remoto passa por revisão administrativa antes da publicação."
         )
