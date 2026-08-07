@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+import html
 
 import pandas as pd
 import streamlit as st
 
 from components.cards import metric_card, progress_row
-from components.charts import PLOT_CONFIG, accuracy_evolution_chart, daily_goal_chart
+from components.charts import PLOT_CONFIG, accuracy_evolution_chart
 from database.database import get_settings, load_df
 from services.reviews import get_due_count, sync_reviews
 from utils.helpers import format_duration
@@ -116,25 +117,114 @@ def _daily_goal_data() -> tuple[list[tuple[str, int, int]], float]:
     items = [
         ("Questões", questions, int(settings["daily_questions_goal"])),
         ("Tempo de estudo", minutes, int(settings["daily_minutes_goal"])),
-        ("Revisar erros", reviews, int(settings["daily_reviews_goal"])),
+        ("Revisões", reviews, int(settings["daily_reviews_goal"])),
         ("Flashcards", cards, int(settings["daily_flashcards_goal"])),
     ]
     completed = sum(1 for _, current, target in items if current >= target)
     return items, 100 * completed / len(items)
 
 
-def _panel_header(title: str, right: str = "") -> None:
-    right_html = f'<span class="reference-panel-filter">{right}</span>' if right else ""
+def _mission_copy(due_reviews: int, total_attempts: int, accuracy: float) -> tuple[str, str, str]:
+    if due_reviews > 0:
+        return (
+            "ZERAR A FILA DE REVISÃO",
+            f"Você tem {due_reviews} revisão(ões) pedindo atenção hoje.",
+            "Revisar primeiro protege o que você já aprendeu antes de avançar no edital.",
+        )
+    if total_attempts < 20:
+        return (
+            "CONSTRUIR SUA LINHA DE BASE",
+            "Seu diagnóstico ainda está começando.",
+            "Responda questões para o ConcursoAI identificar seus pontos fortes e gargalos reais.",
+        )
+    if accuracy < 70:
+        return (
+            "RECUPERAR PONTOS FRACOS",
+            f"Seu aproveitamento recente está em {accuracy:.0f}%.",
+            "Priorize os assuntos com menor acerto antes de aumentar o volume de estudo.",
+        )
+    return (
+        "AMPLIAR COBERTURA DO EDITAL",
+        f"Seu aproveitamento recente está em {accuracy:.0f}%.",
+        "O desempenho está consistente. Agora vale avançar para tópicos ainda pouco praticados.",
+    )
+
+
+def _render_mission(
+    name: str,
+    goal_progress: float,
+    goal_items: list[tuple[str, int, int]],
+    due_reviews: int,
+    total_attempts: int,
+    accuracy: float,
+) -> None:
+    eyebrow, title, detail = _mission_copy(due_reviews, total_attempts, accuracy)
+    safe_name = html.escape(name)
+    completed = sum(1 for _, current, target in goal_items if current >= target)
+    task_html = "".join(
+        f'<span class="mission-task {"done" if current >= target else ""}">'
+        f'<b>{"✓" if current >= target else "•"}</b>{html.escape(label)} <small>{current}/{target}</small></span>'
+        for label, current, target in goal_items
+    )
     st.markdown(
-        f'<div class="reference-panel-header"><h3>{title}</h3>{right_html}</div>',
+        f"""
+        <section class="mission-shell">
+          <div class="mission-copy">
+            <div class="mission-eyebrow">{eyebrow}</div>
+            <h2>{safe_name}, seu próximo avanço começa aqui.</h2>
+            <p><strong>{html.escape(title)}</strong> {html.escape(detail)}</p>
+            <div class="mission-tasks">{task_html}</div>
+          </div>
+          <div class="mission-progress-wrap">
+            <div class="mission-ring" style="--progress:{max(0.0, min(goal_progress, 100.0)):.1f};">
+              <div><strong>{goal_progress:.0f}%</strong><span>meta do dia</span></div>
+            </div>
+            <small>{completed} de {len(goal_items)} objetivos concluídos</small>
+          </div>
+        </section>
+        """,
         unsafe_allow_html=True,
     )
+
+
+def _panel_header(title: str, subtitle: str = "", badge: str = "") -> None:
+    subtitle_html = f"<span>{html.escape(subtitle)}</span>" if subtitle else ""
+    badge_html = f'<b class="command-panel-badge">{html.escape(badge)}</b>' if badge else ""
+    st.markdown(
+        f'<div class="command-panel-header"><div><h3>{title}</h3>{subtitle_html}</div>{badge_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _coach_message(
+    due_reviews: int,
+    accuracy: float,
+    total_attempts: int,
+    performance: pd.DataFrame,
+) -> tuple[str, str, str]:
+    if due_reviews:
+        return "Revisão primeiro", f"Existem {due_reviews} itens vencendo hoje.", "Alta prioridade"
+    if total_attempts < 20:
+        return "Calibrar diagnóstico", "Faça pelo menos 20 questões para ativar recomendações mais precisas.", "Começar agora"
+    if not performance.empty:
+        weakest = performance.sort_values("Acertos").iloc[0]
+        if float(weakest["Acertos"]) < 70:
+            return (
+                "Atacar o maior gargalo",
+                f'{weakest["Matéria"]} está com {float(weakest["Acertos"]):.0f}% de acerto.',
+                "Foco recomendado",
+            )
+    if accuracy >= 80:
+        return "Aumentar dificuldade", "Seu desempenho recente permite incluir questões mais exigentes.", "Bom momento"
+    return "Manter consistência", "Continue alternando questões, revisão e estudo focado.", "Ritmo saudável"
 
 
 def render_dashboard() -> None:
     sync_reviews()
     settings = get_settings()
+    name = str(settings.get("user_name", "Aluno"))
     current_streak, best_streak = _streaks()
+    due_reviews = get_due_count()
     last7 = (date.today() - timedelta(days=6)).isoformat()
 
     total_attempts = int(load_df("SELECT COUNT(*) AS total FROM attempts").iloc[0]["total"])
@@ -142,38 +232,8 @@ def render_dashboard() -> None:
         "SELECT COUNT(*) AS total, COALESCE(100.0 * AVG(correct), 0) AS accuracy FROM attempts WHERE date(attempted_at) >= ?",
         (last7,),
     ).iloc[0]
+    week_accuracy = float(week_attempts["accuracy"])
     week_minutes = int(load_df("SELECT COALESCE(SUM(minutes), 0) AS total FROM study_sessions WHERE session_date >= ?", (last7,)).iloc[0]["total"])
-
-    metrics = st.columns(4, gap="medium")
-    with metrics[0]:
-        metric_card("Sequência", f"{current_streak} dias", f"Melhor: {best_streak} dias", "🔥", "orange")
-    with metrics[1]:
-        metric_card("Questões", str(total_attempts), "Respondidas", "📖", "blue")
-    with metrics[2]:
-        metric_card("Taxa de acertos", f"{float(week_attempts['accuracy']):.0f}%", "Últimos 7 dias", "🎯", "green")
-    with metrics[3]:
-        metric_card("Tempo de estudo", format_duration(week_minutes), "Últimos 7 dias", "◷", "purple")
-
-    upper_left, upper_right = st.columns([1.12, 1], gap="medium")
-    with upper_left:
-        with st.container(border=True):
-            _panel_header("Evolução de acertos", "Últimos 7 dias⌄")
-            st.plotly_chart(
-                accuracy_evolution_chart(_accuracy_last_days()),
-                use_container_width=True,
-                config=PLOT_CONFIG,
-            )
-
-    with upper_right:
-        with st.container(border=True):
-            month_label = f"{MONTHS_PT[date.today().month]} {date.today().year}   ‹   ›"
-            _panel_header("Calendário de estudos  ⓘ", month_label)
-            st.markdown('<div class="heat-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="heatmap reference-heatmap">{_calendar_html()}</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="heat-legend reference-heat-legend"><span class="level-4"></span> 2h+ <span class="level-3"></span> 1h+ <span class="level-2"></span> 30m+ <span class="level-0"></span> Sem estudo</div>',
-                unsafe_allow_html=True,
-            )
 
     performance = load_df(
         """
@@ -186,66 +246,136 @@ def render_dashboard() -> None:
          ORDER BY Acertos DESC, Questões DESC
         """
     )
-    goal_items, goal_progress = _daily_goal_data()
     reviews = load_df(
         """
         SELECT subject, topic, due_date, source
           FROM reviews
          WHERE status IN ('pendente', 'agendada')
          ORDER BY date(due_date), id
-         LIMIT 3
+         LIMIT 4
         """
     )
+    goal_items, goal_progress = _daily_goal_data()
 
-    lower_left, lower_center, lower_right = st.columns([1.04, 1.08, 1.08], gap="medium")
+    _render_mission(
+        name=name,
+        goal_progress=goal_progress,
+        goal_items=goal_items,
+        due_reviews=due_reviews,
+        total_attempts=total_attempts,
+        accuracy=week_accuracy,
+    )
+
+    quick1, quick2, quick3, quick_space = st.columns([1, 1, 1, 2.6], gap="small")
+    with quick1:
+        if st.button("⚡ Revisar agora", key="quick_review", use_container_width=True, type="primary"):
+            _go("Revisões")
+    with quick2:
+        if st.button("◎ Fazer questões", key="quick_questions", use_container_width=True):
+            _go("Questões")
+    with quick3:
+        if st.button("✦ Professor IA", key="quick_ai", use_container_width=True):
+            _go("Professor IA")
+    with quick_space:
+        st.markdown('<div class="quick-context">Ações rápidas para manter o ritmo de hoje</div>', unsafe_allow_html=True)
+
+    metrics = st.columns(4, gap="medium")
+    with metrics[0]:
+        metric_card("Aproveitamento", f"{week_accuracy:.0f}%", "Últimos 7 dias", "◎", "green")
+    with metrics[1]:
+        metric_card("Questões", str(total_attempts), "Respondidas", "▤", "blue")
+    with metrics[2]:
+        metric_card("Tempo focado", format_duration(week_minutes), "Últimos 7 dias", "◷", "purple")
+    with metrics[3]:
+        metric_card("Sequência", f"{current_streak} dias", f"Recorde: {best_streak} dias", "↗", "orange")
+
+    pulse, coach = st.columns([1.65, 1], gap="medium")
+    with pulse:
+        with st.container(border=True):
+            _panel_header("Pulso de desempenho", "Seu aproveitamento ao longo dos últimos 7 dias", "7 DIAS")
+            if total_attempts == 0:
+                st.markdown(
+                    """
+                    <div class="command-empty chart-empty">
+                      <div class="empty-orbit">↗</div>
+                      <strong>Seu gráfico começa com a primeira questão.</strong>
+                      <span>Responda questões para visualizar tendência, consistência e evolução.</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.plotly_chart(
+                    accuracy_evolution_chart(_accuracy_last_days()),
+                    use_container_width=True,
+                    config=PLOT_CONFIG,
+                )
+
+    with coach:
+        with st.container(border=True):
+            coach_title, coach_text, coach_badge = _coach_message(
+                due_reviews, week_accuracy, total_attempts, performance
+            )
+            _panel_header("Coach de aprovação", "Recomendação calculada a partir do seu uso", "IA READY")
+            st.markdown(
+                f"""
+                <div class="coach-card">
+                  <div class="coach-orb">✦</div>
+                  <div class="coach-badge">{html.escape(coach_badge)}</div>
+                  <h4>{html.escape(coach_title)}</h4>
+                  <p>{html.escape(coach_text)}</p>
+                  <div class="coach-foot"><span>CONCURSOAI</span><b>próxima melhor ação →</b></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.button("Abrir Professor IA", key="coach_ai", use_container_width=True):
+                _go("Professor IA")
+
+    lower_left, lower_center, lower_right = st.columns([1.1, 1, 1], gap="medium")
 
     with lower_left:
         with st.container(border=True):
-            _panel_header("Desempenho por matéria")
+            _panel_header("Domínio por matéria", "Onde você ganha e perde pontos")
             if performance.empty:
                 st.markdown(
-                    '<div class="reference-empty"><strong>Seu desempenho aparecerá aqui.</strong><span>Responda questões para gerar o diagnóstico por matéria.</span></div>',
+                    '<div class="command-empty"><strong>Sem diagnóstico ainda.</strong><span>Seu mapa de domínio aparecerá após responder questões.</span></div>',
                     unsafe_allow_html=True,
                 )
             else:
                 for row in performance.head(5).itertuples(index=False):
                     score = float(row.Acertos)
-                    tone = "blue" if score >= 50 else "yellow" if score >= 40 else "red"
+                    tone = "green" if score >= 75 else "blue" if score >= 60 else "yellow" if score >= 45 else "red"
                     progress_row(str(row.Matéria), score, tone)
-            if st.button("Ver todas as matérias  ›", key="dashboard_subjects", use_container_width=True):
-                _go("Estatísticas")
+            if st.button("Explorar desempenho  →", key="dashboard_subjects", use_container_width=True):
+                _go("Desempenho")
 
     with lower_center:
         with st.container(border=True):
-            _panel_header("◎  Meta diária")
-            inner = st.columns([.88, 1.12], gap="small")
-            with inner[0]:
-                st.plotly_chart(daily_goal_chart(goal_progress), use_container_width=True, config=PLOT_CONFIG)
-                completed = sum(1 for _, current, target in goal_items if current >= target)
-                st.markdown(
-                    f'<div class="goal-caption reference-goal-caption">{completed} de {len(goal_items)} metas concluídas</div>',
-                    unsafe_allow_html=True,
-                )
-            with inner[1]:
-                for label, current, target in goal_items:
-                    checked = "✓" if current >= target else "○"
-                    st.markdown(
-                        f'<div class="goal-check reference-goal-check"><span>{checked}</span><div><strong>{label}</strong><small>{current}/{target}</small></div></div>',
-                        unsafe_allow_html=True,
-                    )
-            if st.button("Ver plano de estudos", key="dashboard_plan", use_container_width=True):
-                _go("Estudar")
+            month_label = f"{MONTHS_PT[date.today().month].upper()} {date.today().year}"
+            _panel_header("Consistência", "35 dias de estudo", month_label)
+            st.markdown(
+                '<div class="heat-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(f'<div class="heatmap reference-heatmap">{_calendar_html()}</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="heat-legend reference-heat-legend"><span class="level-4"></span> 2h+ <span class="level-3"></span> 1h+ <span class="level-2"></span> 30m+ <span class="level-0"></span> sem estudo</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("Abrir calendário  →", key="dashboard_calendar", use_container_width=True):
+                _go("Calendário")
 
     with lower_right:
         with st.container(border=True):
-            _panel_header("▣  Próxima revisão")
+            _panel_header("Fila inteligente", "O que revisar em seguida", f"{due_reviews} HOJE")
             if reviews.empty:
                 st.markdown(
-                    '<div class="reference-empty"><strong>Nenhuma revisão agendada.</strong><span>As próximas revisões aparecerão automaticamente aqui.</span></div>',
+                    '<div class="command-empty"><strong>Fila limpa.</strong><span>As próximas revisões aparecerão automaticamente aqui.</span></div>',
                     unsafe_allow_html=True,
                 )
             else:
-                dot_classes = ["blue", "yellow", "green"]
+                dot_classes = ["blue", "yellow", "green", "purple"]
                 for index, row in enumerate(reviews.itertuples(index=False)):
                     due_date = pd.to_datetime(row.due_date).date()
                     if due_date <= date.today():
@@ -254,15 +384,17 @@ def render_dashboard() -> None:
                         when = "Amanhã"
                     else:
                         when = due_date.strftime("%d/%m")
+                    topic = html.escape(str(row.topic or row.subject))
+                    subject = html.escape(str(row.subject))
                     st.markdown(
                         f"""
-                        <div class="reference-review-row">
-                          <span class="reference-review-dot {dot_classes[index % len(dot_classes)]}"></span>
-                          <div class="reference-review-copy"><strong>{row.topic or row.subject}</strong><small>{row.subject}</small></div>
-                          <div class="reference-review-date"><strong>{when}</strong><small>Revisar</small></div>
+                        <div class="command-review-row">
+                          <span class="command-review-dot {dot_classes[index % len(dot_classes)]}"></span>
+                          <div><strong>{topic}</strong><small>{subject}</small></div>
+                          <b>{when}</b>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-            if st.button("Ver todas as revisões  ›", key="dashboard_reviews", use_container_width=True):
+            if st.button("Abrir revisões  →", key="dashboard_reviews", use_container_width=True):
                 _go("Revisões")
