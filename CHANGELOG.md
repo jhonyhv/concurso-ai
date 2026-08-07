@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0-beta
+- Dashboard reconstruído como um centro de comando de aprovação, com identidade própria de edtech + fintech.
+- Nova sidebar azul-marinho com acento amarelo, navegação premium e cartão de status do sistema.
+- Novo cabeçalho com contexto da página, data, revisões pendentes e perfil compacto.
+- Hero “Missão de hoje” com prioridade dinâmica, checklist de metas e anel de progresso real.
+- Ações rápidas para Revisões, Questões e Professor IA.
+- KPIs compactos de aproveitamento, questões, tempo focado e sequência.
+- Bento grid com Pulso de desempenho, Coach de aprovação, Domínio por matéria, Consistência e Fila inteligente.
+- Estados vazios redesenhados para não exibir gráficos artificiais quando ainda não há histórico.
+- Nova camada `assets/command.css` carregada por último e compatível com as variáveis dos temas claro e escuro.
+
+## 1.2.1-beta
+- Dashboard aproximado ao mockup de referência com quatro métricas, gráfico, calendário e três painéis inferiores.
+- Coletor automático movido para Configurações → Administração para limpar a navegação principal.
+
 ## 1.2.0-beta
 - Nova camada visual isolada em `assets/refresh.css` para permitir evolução rápida sem reescrever o tema-base.
 - Sidebar reorganizada por Estudos, Inteligência, Análises e Gestão.
