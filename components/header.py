@@ -35,7 +35,7 @@ def render_header(page: str = "Dashboard") -> None:
             </div>
           </div>
           <div class="reference-profile">
-            <div class="reference-notification" title="{due} revisão(ões) para hoje">♧{badge}</div>
+            <div class="reference-notification" title="{due} revisão(ões) para hoje">🔔{badge}</div>
             <div class="reference-avatar">{name[:1].upper()}</div>
             <div class="reference-profile-name">{name} Vieira <span>⌄</span></div>
           </div>
