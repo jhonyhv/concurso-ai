@@ -16,7 +16,7 @@ def _greeting() -> tuple[str, str]:
         return "Bom dia", "☀️"
     if hour < 18:
         return "Boa tarde", "🌤️"
-    return "Boa noite", "👋"
+    return "Boa noite", "🌙"
 
 
 def render_header(page: str = "Dashboard") -> None:
@@ -26,22 +26,23 @@ def render_header(page: str = "Dashboard") -> None:
     due = get_due_count()
     version_badge = get_version_badge()
     badge = f'<span class="notify-badge">{min(due, 99)}</span>' if due else ""
+
     st.markdown(
         f"""
         <section class="top-header top-header-v2">
           <div class="header-main">
-            <div class="menu-symbol">☰</div>
+            <span class="header-brand-dot"></span>
             <div>
-              <div class="page-kicker">{page} • {format_date_pt(date.today())}</div>
+              <div class="page-kicker">CONCURSOAI / {page.upper()} • {format_date_pt(date.today())}</div>
               <h1>{greeting}, {name}! <span>{icon}</span></h1>
-              <p>Foque hoje, colha amanhã.</p>
+              <p>Seu plano de preparação para o Banco do Brasil, em um só lugar.</p>
             </div>
           </div>
           <div class="profile-area profile-v2">
             <div class="status-chip"><span></span> {version_badge}</div>
             <div class="notification" title="{due} revisão(ões) para hoje">🔔{badge}</div>
             <div class="avatar avatar-photo">{name[:1].upper()}</div>
-            <div class="profile-name">{name} ▾</div>
+            <div class="profile-name">{name}</div>
           </div>
         </section>
         """,
