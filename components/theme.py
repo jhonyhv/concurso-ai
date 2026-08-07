@@ -19,5 +19,6 @@ def load_global_css() -> None:
         theme = "claro"
     if theme == "escuro":
         css += "\n" + _read_css("dark.css")
+    css += "\n" + _read_css("command.css")
     if css:
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
