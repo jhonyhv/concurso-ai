@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 
 import streamlit as st
 
 from database.database import get_settings
 from services.reviews import get_due_count
-from utils.helpers import format_date_pt
-from utils.version import get_version_badge
 
 
 def _greeting() -> tuple[str, str]:
@@ -16,7 +14,7 @@ def _greeting() -> tuple[str, str]:
         return "Bom dia", "☀️"
     if hour < 18:
         return "Boa tarde", "🌤️"
-    return "Boa noite", "🌙"
+    return "Boa noite", "👋"
 
 
 def render_header(page: str = "Dashboard") -> None:
@@ -24,25 +22,22 @@ def render_header(page: str = "Dashboard") -> None:
     name = str(settings.get("user_name", "Jhony"))
     greeting, icon = _greeting()
     due = get_due_count()
-    version_badge = get_version_badge()
     badge = f'<span class="notify-badge">{min(due, 99)}</span>' if due else ""
 
     st.markdown(
         f"""
-        <section class="top-header top-header-v2">
-          <div class="header-main">
-            <span class="header-brand-dot"></span>
+        <section class="top-header reference-header">
+          <div class="reference-header-left">
+            <div class="reference-menu">☷</div>
             <div>
-              <div class="page-kicker">CONCURSOAI / {page.upper()} • {format_date_pt(date.today())}</div>
               <h1>{greeting}, {name}! <span>{icon}</span></h1>
-              <p>Seu plano de preparação para o Banco do Brasil, em um só lugar.</p>
+              <p>Foque hoje, colha amanhã.</p>
             </div>
           </div>
-          <div class="profile-area profile-v2">
-            <div class="status-chip"><span></span> {version_badge}</div>
-            <div class="notification" title="{due} revisão(ões) para hoje">🔔{badge}</div>
-            <div class="avatar avatar-photo">{name[:1].upper()}</div>
-            <div class="profile-name">{name}</div>
+          <div class="reference-profile">
+            <div class="reference-notification" title="{due} revisão(ões) para hoje">♧{badge}</div>
+            <div class="reference-avatar">{name[:1].upper()}</div>
+            <div class="reference-profile-name">{name} Vieira <span>⌄</span></div>
           </div>
         </section>
         """,
