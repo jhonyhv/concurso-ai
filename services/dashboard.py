@@ -7,10 +7,29 @@ import streamlit as st
 
 from components.cards import metric_card, progress_row
 from components.charts import PLOT_CONFIG, accuracy_evolution_chart, daily_goal_chart
-from components.focus import render_focus_hero
 from database.database import get_settings, load_df
 from services.reviews import get_due_count, sync_reviews
 from utils.helpers import format_duration
+
+MONTHS_PT = {
+    1: "Janeiro",
+    2: "Fevereiro",
+    3: "Março",
+    4: "Abril",
+    5: "Maio",
+    6: "Junho",
+    7: "Julho",
+    8: "Agosto",
+    9: "Setembro",
+    10: "Outubro",
+    11: "Novembro",
+    12: "Dezembro",
+}
+
+
+def _go(page: str) -> None:
+    st.session_state.current_page = page
+    st.rerun()
 
 
 def _study_days() -> set[date]:
@@ -81,7 +100,9 @@ def _calendar_html() -> str:
         total = minutes.get(day, 0)
         level = 0 if total == 0 else 1 if total < 30 else 2 if total < 60 else 3 if total < 120 else 4
         today_class = " today" if day == date.today() else ""
-        cells.append(f'<span class="heat-cell level-{level}{today_class}" title="{day.strftime("%d/%m/%Y")}: {total} min"></span>')
+        cells.append(
+            f'<span class="heat-cell level-{level}{today_class}" title="{day.strftime("%d/%m/%Y")}: {total} min"></span>'
+        )
     return "".join(cells)
 
 
@@ -102,15 +123,10 @@ def _daily_goal_data() -> tuple[list[tuple[str, int, int]], float]:
     return items, 100 * completed / len(items)
 
 
-def _empty_state(title: str, detail: str, icon: str = "↗") -> None:
+def _panel_header(title: str, right: str = "") -> None:
+    right_html = f'<span class="reference-panel-filter">{right}</span>' if right else ""
     st.markdown(
-        f"""
-        <div class="dashboard-empty-state">
-          <div class="dashboard-empty-icon">{icon}</div>
-          <strong>{title}</strong>
-          <span>{detail}</span>
-        </div>
-        """,
+        f'<div class="reference-panel-header"><h3>{title}</h3>{right_html}</div>',
         unsafe_allow_html=True,
     )
 
@@ -127,41 +143,35 @@ def render_dashboard() -> None:
         (last7,),
     ).iloc[0]
     week_minutes = int(load_df("SELECT COALESCE(SUM(minutes), 0) AS total FROM study_sessions WHERE session_date >= ?", (last7,)).iloc[0]["total"])
-    due_reviews = get_due_count()
 
-    render_focus_hero(
-        name=str(settings.get("user_name", "Aluno")),
-        due_reviews=due_reviews,
-    )
-
-    columns = st.columns(4)
-    with columns[0]:
+    metrics = st.columns(4, gap="medium")
+    with metrics[0]:
         metric_card("Sequência", f"{current_streak} dias", f"Melhor: {best_streak} dias", "🔥", "orange")
-    with columns[1]:
+    with metrics[1]:
         metric_card("Questões", str(total_attempts), "Respondidas", "📖", "blue")
-    with columns[2]:
+    with metrics[2]:
         metric_card("Taxa de acertos", f"{float(week_attempts['accuracy']):.0f}%", "Últimos 7 dias", "🎯", "green")
-    with columns[3]:
+    with metrics[3]:
         metric_card("Tempo de estudo", format_duration(week_minutes), "Últimos 7 dias", "◷", "purple")
 
-    left, right = st.columns([1.15, 1])
-    with left:
+    upper_left, upper_right = st.columns([1.12, 1], gap="medium")
+    with upper_left:
         with st.container(border=True):
-            st.markdown('<div class="panel-header"><div><h3>Evolução de acertos</h3><span>Últimos 7 dias</span></div></div>', unsafe_allow_html=True)
-            if total_attempts == 0:
-                _empty_state(
-                    "Seu gráfico começa com a primeira questão",
-                    "Resolva um bloco de questões para acompanhar a evolução de acertos ao longo da semana.",
-                    "↗",
-                )
-            else:
-                st.plotly_chart(accuracy_evolution_chart(_accuracy_last_days()), use_container_width=True, config=PLOT_CONFIG)
-    with right:
+            _panel_header("Evolução de acertos", "Últimos 7 dias⌄")
+            st.plotly_chart(
+                accuracy_evolution_chart(_accuracy_last_days()),
+                use_container_width=True,
+                config=PLOT_CONFIG,
+            )
+
+    with upper_right:
         with st.container(border=True):
-            st.markdown('<div class="panel-header"><div><h3>Calendário de estudos</h3><span>Últimos 35 dias</span></div></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="heatmap heatmap-dashboard">{_calendar_html()}</div>', unsafe_allow_html=True)
+            month_label = f"{MONTHS_PT[date.today().month]} {date.today().year}   ‹   ›"
+            _panel_header("Calendário de estudos  ⓘ", month_label)
+            st.markdown('<div class="heat-weekdays"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="heatmap reference-heatmap">{_calendar_html()}</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="heat-legend"><span class="level-4"></span> 2h+ <span class="level-3"></span> 1h+ <span class="level-2"></span> 30m+ <span class="level-0"></span> Sem estudo</div>',
+                '<div class="heat-legend reference-heat-legend"><span class="level-4"></span> 2h+ <span class="level-3"></span> 1h+ <span class="level-2"></span> 30m+ <span class="level-0"></span> Sem estudo</div>',
                 unsafe_allow_html=True,
             )
 
@@ -187,37 +197,56 @@ def render_dashboard() -> None:
         """
     )
 
-    col1, col2, col3 = st.columns([1.05, 1.05, 1])
-    with col1:
-        with st.container(border=True):
-            st.markdown('<div class="panel-header"><div><h3>Desempenho por matéria</h3><span>Pontos fortes e fracos</span></div></div>', unsafe_allow_html=True)
-            if performance.empty:
-                _empty_state("Ainda sem diagnóstico", "Seu desempenho por matéria aparecerá aqui após as primeiras questões.", "◎")
-            else:
-                tones = ["blue", "purple", "orange", "red", "green", "yellow"]
-                for index, row in performance.head(5).reset_index(drop=True).iterrows():
-                    progress_row(str(row["Matéria"]), float(row["Acertos"]), tones[index % len(tones)])
+    lower_left, lower_center, lower_right = st.columns([1.04, 1.08, 1.08], gap="medium")
 
-    with col2:
+    with lower_left:
         with st.container(border=True):
-            st.markdown('<div class="panel-header"><div><h3>Meta diária</h3><span>Progresso de hoje</span></div></div>', unsafe_allow_html=True)
-            inner = st.columns([1, 1.1])
+            _panel_header("Desempenho por matéria")
+            if performance.empty:
+                st.markdown(
+                    '<div class="reference-empty"><strong>Seu desempenho aparecerá aqui.</strong><span>Responda questões para gerar o diagnóstico por matéria.</span></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                for row in performance.head(5).itertuples(index=False):
+                    score = float(row.Acertos)
+                    tone = "blue" if score >= 50 else "yellow" if score >= 40 else "red"
+                    progress_row(str(row.Matéria), score, tone)
+            if st.button("Ver todas as matérias  ›", key="dashboard_subjects", use_container_width=True):
+                _go("Estatísticas")
+
+    with lower_center:
+        with st.container(border=True):
+            _panel_header("◎  Meta diária")
+            inner = st.columns([.88, 1.12], gap="small")
             with inner[0]:
                 st.plotly_chart(daily_goal_chart(goal_progress), use_container_width=True, config=PLOT_CONFIG)
                 completed = sum(1 for _, current, target in goal_items if current >= target)
-                st.markdown(f'<div class="goal-caption">{completed} de {len(goal_items)} metas concluídas</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="goal-caption reference-goal-caption">{completed} de {len(goal_items)} metas concluídas</div>',
+                    unsafe_allow_html=True,
+                )
             with inner[1]:
                 for label, current, target in goal_items:
                     checked = "✓" if current >= target else "○"
-                    st.markdown(f'<div class="goal-check"><span>{checked}</span><div><strong>{label}</strong><small>{current}/{target}</small></div></div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="goal-check reference-goal-check"><span>{checked}</span><div><strong>{label}</strong><small>{current}/{target}</small></div></div>',
+                        unsafe_allow_html=True,
+                    )
+            if st.button("Ver plano de estudos", key="dashboard_plan", use_container_width=True):
+                _go("Estudar")
 
-    with col3:
+    with lower_right:
         with st.container(border=True):
-            st.markdown('<div class="panel-header"><div><h3>Próxima revisão</h3><span>Agenda inteligente</span></div></div>', unsafe_allow_html=True)
+            _panel_header("▣  Próxima revisão")
             if reviews.empty:
-                _empty_state("Fila em dia", "Nenhuma revisão está agendada no momento.", "✓")
+                st.markdown(
+                    '<div class="reference-empty"><strong>Nenhuma revisão agendada.</strong><span>As próximas revisões aparecerão automaticamente aqui.</span></div>',
+                    unsafe_allow_html=True,
+                )
             else:
-                for row in reviews.itertuples(index=False):
+                dot_classes = ["blue", "yellow", "green"]
+                for index, row in enumerate(reviews.itertuples(index=False)):
                     due_date = pd.to_datetime(row.due_date).date()
                     if due_date <= date.today():
                         when = "Hoje"
@@ -227,12 +256,13 @@ def render_dashboard() -> None:
                         when = due_date.strftime("%d/%m")
                     st.markdown(
                         f"""
-                        <div class="review-mini">
-                          <span class="review-dot"></span>
-                          <div><strong>{row.topic or row.subject}</strong><small>{row.subject}</small></div>
-                          <b>{when}</b>
+                        <div class="reference-review-row">
+                          <span class="reference-review-dot {dot_classes[index % len(dot_classes)]}"></span>
+                          <div class="reference-review-copy"><strong>{row.topic or row.subject}</strong><small>{row.subject}</small></div>
+                          <div class="reference-review-date"><strong>{when}</strong><small>Revisar</small></div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-            st.markdown(f'<div class="dashboard-foot">{due_reviews} revisão(ões) para hoje</div>', unsafe_allow_html=True)
+            if st.button("Ver todas as revisões  ›", key="dashboard_reviews", use_container_width=True):
+                _go("Revisões")
