@@ -6,11 +6,11 @@ from database.database import get_settings
 from utils.version import get_version_label
 
 SECTIONS = [
-    ("", [("Dashboard", "🏠")]),
-    ("ESTUDOS", [("Estudar", "📖"), ("Questões", "❓"), ("Simulados", "📝"), ("Flashcards", "🗂️")]),
-    ("IA", [("Professor IA", "🤖")]),
-    ("ANÁLISES", [("Estatísticas", "📊"), ("Desempenho", "📈"), ("Revisões", "🗓️")]),
-    ("OUTROS", [("Metas", "🎯"), ("Calendário", "📅"), ("Coletor automático", "🌐"), ("Configurações", "⚙️")]),
+    ("", [("Dashboard", "⌂")]),
+    ("ESTUDOS", [("Estudar", "▣"), ("Questões", "?"), ("Simulados", "✎"), ("Flashcards", "▤")]),
+    ("INTELIGÊNCIA", [("Professor IA", "✦")]),
+    ("ANÁLISES", [("Estatísticas", "▥"), ("Desempenho", "↗"), ("Revisões", "◷")]),
+    ("GESTÃO", [("Metas", "◎"), ("Calendário", "□"), ("Coletor automático", "⇄"), ("Configurações", "⚙")]),
 ]
 
 
@@ -23,8 +23,8 @@ def render_sidebar() -> str:
         st.markdown(
             """
             <div class="brand-box brand-v2">
-              <div class="brand-mark brand-bank">🏛️</div>
-              <div><strong>Concurso<span>AI</span></strong><small>Banco do Brasil Edition</small></div>
+              <div class="brand-mark brand-bank">CA</div>
+              <div><strong>Concurso<span>AI</span></strong><small>Preparação Banco do Brasil</small></div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -36,7 +36,7 @@ def render_sidebar() -> str:
             for page, icon in items:
                 active = st.session_state.current_page == page
                 if st.button(
-                    f"{icon}  {page}",
+                    f"{icon}   {page}",
                     key=f"nav_{page}",
                     use_container_width=True,
                     type="primary" if active else "secondary",
@@ -47,10 +47,10 @@ def render_sidebar() -> str:
         st.markdown(
             f"""
             <div class="upgrade-card premium-card">
-              <div class="upgrade-icon">👑</div>
-              <strong>Plano de aprovação</strong>
-              <p>{settings['user_name']}, mantenha suas metas, revisões e questões em dia.</p>
-              <div class="premium-pill">Versão {version_label} • Revisão administrativa</div>
+              <div class="upgrade-icon">⚡</div>
+              <strong>Rota de aprovação</strong>
+              <p>{settings['user_name']}, acompanhe estudo, revisões, questões e evolução em um único painel.</p>
+              <div class="premium-pill">v{version_label} • Catálogo revisado</div>
             </div>
             """,
             unsafe_allow_html=True,
