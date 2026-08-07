@@ -15,13 +15,74 @@ from collector.models import CandidateQuestion, ExtractedDocument, SourceConfig
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_MODEL = "openai/gpt-oss-20b"
 MIN_SOURCE_CHARS = 1200
-MAX_EXCERPT_CHARS = 7000
+MAX_EXCERPT_CHARS = 6500
 MAX_QUESTIONS_PER_REQUEST = 3
-MAX_COMPLETION_TOKENS = 2400
-RETRY_EXCERPT_CHARS = 3800
-RETRY_QUESTIONS = 2
-RETRY_COMPLETION_TOKENS = 1600
+MAX_COMPLETION_TOKENS = 2200
+RETRY_EXCERPT_CHARS = 3600
+RETRY_QUESTIONS = 1
+RETRY_COMPLETION_TOKENS = 1200
 LOGGER = logging.getLogger("concursoai.collector.ai")
+
+QUESTION_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "questions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string"},
+                    "topic": {"type": "string"},
+                    "subtopic": {"type": "string"},
+                    "difficulty": {
+                        "type": "string",
+                        "enum": ["Fácil", "Média", "Difícil"],
+                    },
+                    "statement": {"type": "string"},
+                    "options": {
+                        "type": "object",
+                        "properties": {
+                            "A": {"type": "string"},
+                            "B": {"type": "string"},
+                            "C": {"type": "string"},
+                            "D": {"type": "string"},
+                            "E": {"type": "string"},
+                        },
+                        "required": ["A", "B", "C", "D", "E"],
+                        "additionalProperties": False,
+                    },
+                    "answer": {
+                        "type": "string",
+                        "enum": ["A", "B", "C", "D", "E"],
+                    },
+                    "explanation": {"type": "string"},
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "cargo": {"type": "string"},
+                    "year": {"type": ["integer", "null"]},
+                },
+                "required": [
+                    "subject",
+                    "topic",
+                    "subtopic",
+                    "difficulty",
+                    "statement",
+                    "options",
+                    "answer",
+                    "explanation",
+                    "tags",
+                    "cargo",
+                    "year",
+                ],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["questions"],
+    "additionalProperties": False,
+}
 
 
 def _normalized(value: str) -> str:
@@ -58,8 +119,8 @@ def _source_excerpt(text: str, limit: int = MAX_EXCERPT_CHARS) -> str:
         position = indexed.rfind(anchor)
         if position < 0:
             continue
-        start = max(0, position - 350)
-        end = min(len(cleaned), position + 1900)
+        start = max(0, position - 300)
+        end = min(len(cleaned), position + 1750)
         if any(start < existing_end and end > existing_start for existing_start, existing_end in windows):
             continue
         windows.append((start, end))
@@ -90,20 +151,13 @@ def _uid(source: SourceConfig, statement: str, options: dict[str, str]) -> str:
 
 
 def _extract_json(content: str) -> list[dict]:
-    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip(), flags=re.I | re.S)
-    payload = json.loads(cleaned)
-
-    if isinstance(payload, dict):
-        questions = payload.get("questions")
-        if not isinstance(questions, list):
-            raise ValueError("O objeto JSON não contém a lista 'questions'.")
-        return questions
-
-    # Compatibilidade com respostas antigas em formato de array.
-    if isinstance(payload, list):
-        return payload
-
-    raise ValueError("Resposta JSON inesperada.")
+    payload = json.loads(content.strip())
+    if not isinstance(payload, dict):
+        raise ValueError("A resposta estruturada não é um objeto JSON.")
+    questions = payload.get("questions")
+    if not isinstance(questions, list):
+        raise ValueError("O objeto JSON não contém a lista 'questions'.")
+    return questions
 
 
 def _build_prompt(
@@ -113,27 +167,24 @@ def _build_prompt(
     quantity: int,
 ) -> str:
     return f"""
-Crie até {quantity} questões INÉDITAS para uma plataforma de preparação para concursos.
-Não copie frases longas nem reproduza questões existentes. Use somente informações presentes nos trechos abaixo.
+Crie no máximo {quantity} questões INÉDITAS para preparação de concursos, em português do Brasil.
 {source.style_notes}
 
-Toda afirmação do enunciado, da resposta correta e da explicação deve ser verificável nos trechos fornecidos.
-Não acrescente produtos, tarifas, limites, valores, datas, percentuais, benefícios ou regras ausentes.
-Produza menos questões quando o conteúdo sustentar poucos itens confiáveis.
+REGRAS DE CONTEÚDO:
+1. Os trechos do edital definem quais matérias e tópicos podem ser cobrados.
+2. Não invente características de produtos do Banco do Brasil, tarifas, benefícios, limites, prazos, percentuais, políticas internas ou regras bancárias que não estejam expressos nos trechos.
+3. Em Matemática, Matemática Financeira, Probabilidade ou Estatística, números fictícios são permitidos SOMENTE em um problema claramente hipotético e nunca podem ser apresentados como valor, taxa ou condição praticada pelo Banco do Brasil.
+4. Se um tópico estiver apenas citado no conteúdo programático e os trechos não trouxerem informação factual suficiente para uma questão conceitual segura, prefira outro tópico ou retorne menos questões.
+5. Não copie questões existentes nem frases longas do edital.
+6. A explicação deve justificar a resposta correta e a principal distratora sem atribuir ao Banco do Brasil fatos não sustentados pela fonte.
 
 Fonte oficial: {document.title}
 Órgão: {source.organization}
 Concurso: {source.contest}
 Banca/estilo: {source.bank}
-URL de origem: {document.url}
+URL: {document.url}
 
-Retorne SOMENTE um objeto JSON válido no formato:
-{{"questions": [{{"subject": "...", "topic": "...", "subtopic": "...", "difficulty": "Fácil|Média|Difícil", "statement": "...", "options": {{"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."}}, "answer": "A-E", "explanation": "...", "tags": ["..."], "cargo": "Agente Comercial", "year": 2022}}]}}
-
-A explicação deve justificar a correta com base na fonte e apontar por que a principal alternativa-distratora está errada.
-Garanta apenas uma resposta correta e cinco alternativas plausíveis.
-
-TRECHOS SELECIONADOS DA FONTE:
+TRECHOS SELECIONADOS DO EDITAL:
 {source_text}
 """.strip()
 
@@ -153,15 +204,22 @@ def _request_groq(
                 {
                     "role": "system",
                     "content": (
-                        "Você elabora questões de concursos usando somente a fonte fornecida. "
-                        "Responda exclusivamente com um objeto JSON válido contendo a chave questions."
+                        "Você é um elaborador de questões para concursos. "
+                        "Siga rigorosamente a fonte e o esquema de saída fornecidos."
                     ),
                 },
                 {"role": "user", "content": prompt},
             ],
-            "temperature": 0.2,
+            "temperature": 0.15,
             "max_completion_tokens": max_completion_tokens,
-            "response_format": {"type": "json_object"},
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "contest_questions",
+                    "strict": True,
+                    "schema": QUESTION_RESPONSE_SCHEMA,
+                },
+            },
             "reasoning_format": "hidden",
             "reasoning_effort": "low",
         },
@@ -188,6 +246,15 @@ def _decode_response(response: requests.Response) -> tuple[list[dict], str]:
         raise ValueError("A resposta da Groq foi interrompida por limite de saída.")
 
     return _extract_json(content), finish_reason
+
+
+def _retryable_http_error(response: requests.Response) -> bool:
+    if response.status_code in {413, 429, 500, 502, 503, 504}:
+        return True
+    if response.status_code != 400:
+        return False
+    text = response.text.lower()
+    return "json_validate_failed" in text or "failed to generate json" in text
 
 
 def generate_original_questions(
@@ -222,7 +289,7 @@ def generate_original_questions(
         source_text = _source_excerpt(document.text, excerpt_limit)
         prompt = _build_prompt(source, document, source_text, attempt_quantity)
         LOGGER.info(
-            "Enviando à Groq: tentativa=%s questões=%s trecho=%s caracteres limite_saida=%s modo=json_object",
+            "Enviando à Groq: tentativa=%s questões=%s trecho=%s caracteres limite_saida=%s modo=json_schema_strict",
             attempt_number,
             attempt_quantity,
             len(source_text),
@@ -234,10 +301,9 @@ def generate_original_questions(
             last_error = RuntimeError(
                 f"Groq HTTP {response.status_code}: {response.text[:500]}"
             )
-            retryable = response.status_code in {413, 429, 500, 502, 503, 504}
-            if retryable and attempt_number < len(attempts):
+            if _retryable_http_error(response) and attempt_number < len(attempts):
                 LOGGER.warning(
-                    "Groq recusou a tentativa %s; repetindo com contexto e saída menores.",
+                    "Groq recusou a tentativa %s; repetindo com uma questão e contexto menor.",
                     attempt_number,
                 )
                 continue
@@ -246,7 +312,7 @@ def generate_original_questions(
         try:
             data, finish_reason = _decode_response(response)
             LOGGER.info(
-                "Resposta JSON válida recebida da Groq: tentativa=%s itens=%s finish_reason=%s",
+                "Resposta estruturada válida: tentativa=%s itens=%s finish_reason=%s",
                 attempt_number,
                 len(data),
                 finish_reason or "não informado",
@@ -256,12 +322,14 @@ def generate_original_questions(
             last_error = exc
             if attempt_number < len(attempts):
                 LOGGER.warning(
-                    "Resposta JSON inválida ou truncada na tentativa %s (%s); repetindo com lote menor.",
+                    "Resposta inválida na tentativa %s (%s); repetindo com uma questão.",
                     attempt_number,
                     exc,
                 )
                 continue
-            raise RuntimeError(f"A Groq não retornou JSON válido após nova tentativa: {exc}") from exc
+            raise RuntimeError(
+                f"A Groq não retornou uma resposta estruturada válida após nova tentativa: {exc}"
+            ) from exc
 
     if data is None:
         raise RuntimeError(f"A Groq não retornou questões: {last_error}")
@@ -280,10 +348,16 @@ def generate_original_questions(
         }
         answer = str(item.get("answer", "")).upper().strip()
         statement = str(item.get("statement", "")).strip()
+        explanation = str(item.get("explanation", "")).strip()
         if set(options) != set("ABCDE") or answer not in options or len(statement) < 25:
             continue
         if len({value.casefold() for value in options.values()}) != 5:
             continue
+        if len(explanation) < 20:
+            continue
+
+        raw_year = item.get("year")
+        year = raw_year if isinstance(raw_year, int) else None
 
         candidates.append(
             CandidateQuestion(
@@ -292,7 +366,7 @@ def generate_original_questions(
                 contest=source.contest,
                 bank=source.bank,
                 cargo=str(item.get("cargo") or "Agente Comercial"),
-                year=int(item["year"]) if str(item.get("year", "")).isdigit() else None,
+                year=year,
                 subject=str(item.get("subject") or source.default_subject),
                 topic=str(item.get("topic") or "Geral"),
                 subtopic=str(item.get("subtopic") or ""),
@@ -300,7 +374,7 @@ def generate_original_questions(
                 statement=statement,
                 options=options,
                 answer=answer,
-                explanation=str(item.get("explanation") or ""),
+                explanation=explanation,
                 tags=[str(tag) for tag in item.get("tags", [])][:12]
                 + [source.source_id, "inédita_ia"],
                 source_url=document.url,
