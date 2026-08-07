@@ -7,6 +7,7 @@ import streamlit as st
 
 from components.cards import metric_card, progress_row
 from components.charts import PLOT_CONFIG, accuracy_evolution_chart, daily_goal_chart
+from components.focus import render_focus_hero
 from database.database import get_settings, load_df
 from services.reviews import get_due_count, sync_reviews
 from utils.helpers import format_duration, safe_percent
@@ -114,6 +115,14 @@ def render_dashboard() -> None:
         (last7,),
     ).iloc[0]
     week_minutes = int(load_df("SELECT COALESCE(SUM(minutes), 0) AS total FROM study_sessions WHERE session_date >= ?", (last7,)).iloc[0]["total"])
+
+    render_focus_hero(
+        name=str(settings.get("user_name", "Aluno")),
+        streak=current_streak,
+        accuracy=float(week_attempts["accuracy"]),
+        study_minutes=week_minutes,
+        due_reviews=get_due_count(),
+    )
 
     columns = st.columns(4)
     with columns[0]:
