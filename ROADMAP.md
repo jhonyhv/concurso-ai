@@ -4,7 +4,7 @@
 Transformar o projeto em uma plataforma de preparação para o Banco do Brasil com catálogo confiável, revisão administrativa, simulados, análise de desempenho e experiência visual consistente.
 
 ## Fase 1 — Base visual v1.2
-Status: em implementação
+Status: base aplicada; refinamento contínuo
 
 - nova identidade visual azul/amarelo inspirada no contexto bancário sem copiar identidade proprietária;
 - sidebar mais limpa e agrupada por tarefa;
