@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.6-beta
+- Migração da geração da Groq de `json_object` para Structured Outputs com `json_schema` e `strict: true`.
+- Esquema rígido para enunciado, alternativas A-E, gabarito, explicação, matéria, assunto, dificuldade, tags, cargo e ano.
+- Nova tentativa automática quando a API devolver `json_validate_failed` ou outro erro transitório de geração estruturada.
+- Segundo lote reduzido para uma única questão com contexto menor.
+- Regras reforçadas para impedir que valores hipotéticos sejam apresentados como tarifas, produtos, benefícios ou condições do Banco do Brasil.
+- Números fictícios ficam permitidos somente em problemas explicitamente hipotéticos de Matemática, Matemática Financeira, Probabilidade ou Estatística.
+
 ## 1.1.5-beta
 - Ativação do modo JSON nativo da Groq com `response_format=json_object`.
 - Resposta padronizada no formato `{ "questions": [...] }`.
