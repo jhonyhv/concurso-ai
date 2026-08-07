@@ -12,6 +12,7 @@ def _read_css(filename: str) -> str:
 
 def load_global_css() -> None:
     css = _read_css("style.css")
+    css += "\n" + _read_css("refresh.css")
     try:
         theme = str(get_settings().get("theme", "claro"))
     except Exception:
