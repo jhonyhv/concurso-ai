@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0-beta
+- Nova camada visual isolada em `assets/refresh.css` para permitir evolução rápida sem reescrever o tema-base.
+- Sidebar reorganizada por Estudos, Inteligência, Análises e Gestão.
+- Identidade visual refinada em azul e amarelo, com marca tipográfica do ConcursoAI.
+- Cabeçalho mais compacto com contexto da página, data, versão e revisões pendentes.
+- Novo Painel de Foco no Dashboard com sequência, acertos, tempo de estudo e revisões do dia.
+- Cartões, abas, botões, formulários e containers com hierarquia, sombras e espaçamento mais consistentes.
+- Responsividade preservada e compatibilidade mantida com o tema escuro.
+- Adicionado `ROADMAP.md` com a sequência acelerada de evolução do produto e da arquitetura de fontes.
+
 ## 1.1.6-beta
 - Migração da geração da Groq de `json_object` para Structured Outputs com `json_schema` e `strict: true`.
 - Esquema rígido para enunciado, alternativas A-E, gabarito, explicação, matéria, assunto, dificuldade, tags, cargo e ano.
@@ -70,7 +80,7 @@
 
 ### Professor IA
 - integração opcional com a API Groq;
-- seleção entre modo automático, online e local;
+- seleção entre modo automático e local;
 - contexto baseado em desempenho, assuntos fracos e caderno de erros;
 - formatos de resposta para explicação, plano, revisão e resposta objetiva;
 - teste de conexão e histórico técnico de uso;
