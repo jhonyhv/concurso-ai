@@ -10,7 +10,7 @@ from components.charts import PLOT_CONFIG, accuracy_evolution_chart, daily_goal_
 from components.focus import render_focus_hero
 from database.database import get_settings, load_df
 from services.reviews import get_due_count, sync_reviews
-from utils.helpers import format_duration, safe_percent
+from utils.helpers import format_duration
 
 
 def _study_days() -> set[date]:
@@ -102,11 +102,23 @@ def _daily_goal_data() -> tuple[list[tuple[str, int, int]], float]:
     return items, 100 * completed / len(items)
 
 
+def _empty_state(title: str, detail: str, icon: str = "↗") -> None:
+    st.markdown(
+        f"""
+        <div class="dashboard-empty-state">
+          <div class="dashboard-empty-icon">{icon}</div>
+          <strong>{title}</strong>
+          <span>{detail}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_dashboard() -> None:
     sync_reviews()
     settings = get_settings()
     current_streak, best_streak = _streaks()
-    today = date.today().isoformat()
     last7 = (date.today() - timedelta(days=6)).isoformat()
 
     total_attempts = int(load_df("SELECT COUNT(*) AS total FROM attempts").iloc[0]["total"])
@@ -115,13 +127,11 @@ def render_dashboard() -> None:
         (last7,),
     ).iloc[0]
     week_minutes = int(load_df("SELECT COALESCE(SUM(minutes), 0) AS total FROM study_sessions WHERE session_date >= ?", (last7,)).iloc[0]["total"])
+    due_reviews = get_due_count()
 
     render_focus_hero(
         name=str(settings.get("user_name", "Aluno")),
-        streak=current_streak,
-        accuracy=float(week_attempts["accuracy"]),
-        study_minutes=week_minutes,
-        due_reviews=get_due_count(),
+        due_reviews=due_reviews,
     )
 
     columns = st.columns(4)
@@ -134,11 +144,18 @@ def render_dashboard() -> None:
     with columns[3]:
         metric_card("Tempo de estudo", format_duration(week_minutes), "Últimos 7 dias", "◷", "purple")
 
-    left, right = st.columns([1.2, 1])
+    left, right = st.columns([1.15, 1])
     with left:
         with st.container(border=True):
             st.markdown('<div class="panel-header"><div><h3>Evolução de acertos</h3><span>Últimos 7 dias</span></div></div>', unsafe_allow_html=True)
-            st.plotly_chart(accuracy_evolution_chart(_accuracy_last_days()), use_container_width=True, config=PLOT_CONFIG)
+            if total_attempts == 0:
+                _empty_state(
+                    "Seu gráfico começa com a primeira questão",
+                    "Resolva um bloco de questões para acompanhar a evolução de acertos ao longo da semana.",
+                    "↗",
+                )
+            else:
+                st.plotly_chart(accuracy_evolution_chart(_accuracy_last_days()), use_container_width=True, config=PLOT_CONFIG)
     with right:
         with st.container(border=True):
             st.markdown('<div class="panel-header"><div><h3>Calendário de estudos</h3><span>Últimos 35 dias</span></div></div>', unsafe_allow_html=True)
@@ -175,7 +192,7 @@ def render_dashboard() -> None:
         with st.container(border=True):
             st.markdown('<div class="panel-header"><div><h3>Desempenho por matéria</h3><span>Pontos fortes e fracos</span></div></div>', unsafe_allow_html=True)
             if performance.empty:
-                st.info("Responda questões para gerar seu diagnóstico.")
+                _empty_state("Ainda sem diagnóstico", "Seu desempenho por matéria aparecerá aqui após as primeiras questões.", "◎")
             else:
                 tones = ["blue", "purple", "orange", "red", "green", "yellow"]
                 for index, row in performance.head(5).reset_index(drop=True).iterrows():
@@ -183,7 +200,7 @@ def render_dashboard() -> None:
 
     with col2:
         with st.container(border=True):
-            st.markdown('<div class="panel-header"><div><h3>🎯 Meta diária</h3><span>Progresso de hoje</span></div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="panel-header"><div><h3>Meta diária</h3><span>Progresso de hoje</span></div></div>', unsafe_allow_html=True)
             inner = st.columns([1, 1.1])
             with inner[0]:
                 st.plotly_chart(daily_goal_chart(goal_progress), use_container_width=True, config=PLOT_CONFIG)
@@ -196,9 +213,9 @@ def render_dashboard() -> None:
 
     with col3:
         with st.container(border=True):
-            st.markdown('<div class="panel-header"><div><h3>📅 Próxima revisão</h3><span>Agenda inteligente</span></div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="panel-header"><div><h3>Próxima revisão</h3><span>Agenda inteligente</span></div></div>', unsafe_allow_html=True)
             if reviews.empty:
-                st.info("Nenhuma revisão agendada.")
+                _empty_state("Fila em dia", "Nenhuma revisão está agendada no momento.", "✓")
             else:
                 for row in reviews.itertuples(index=False):
                     due_date = pd.to_datetime(row.due_date).date()
@@ -218,4 +235,4 @@ def render_dashboard() -> None:
                         """,
                         unsafe_allow_html=True,
                     )
-            st.markdown(f'<div class="dashboard-foot">{get_due_count()} revisão(ões) para hoje</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="dashboard-foot">{due_reviews} revisão(ões) para hoje</div>', unsafe_allow_html=True)
